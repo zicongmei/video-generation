@@ -31,6 +31,10 @@ echo "Creating authentication file for user: $AUTH_USER"
 sudo htpasswd -bc /etc/nginx/.htpasswd "$AUTH_USER" "$AUTH_PASS"
 
 # 5. Nginx Configuration
+
+echo "Cleaning up conflicting Nginx configurations..."
+sudo rm -f /etc/nginx/sites-enabled/*
+
 sudo tee /etc/nginx/sites-available/comfyui <<'EOF'
 server {
     listen 443 ssl;
