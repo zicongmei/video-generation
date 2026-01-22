@@ -14,6 +14,9 @@ PYTHON_310=$(find_python310)
 setup_ssl_cert
 
 # 2. Nginx Configuration
+echo "Cleaning up conflicting Nginx configurations..."
+sudo rm -f /etc/nginx/sites-enabled/*
+
 sudo tee /etc/nginx/sites-available/comfyui <<'EOF'
 server {
     listen 443 ssl;

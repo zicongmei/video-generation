@@ -16,13 +16,8 @@ AUTH_PASS=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal
 # 2. Dependencies and cleanup
 install_system_dependencies
 
-echo "Stopping ComfyUI service if running..."
-sudo systemctl stop comfyui || true
-sudo systemctl disable comfyui || true
-
 echo "Cleaning up conflicting Nginx configurations..."
-sudo rm -f /etc/nginx/sites-enabled/comfyui
-sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm -f /etc/nginx/sites-enabled/*
 
 echo "Cleaning up existing services on port 443..."
 sudo systemctl stop swarmui-proxy || true

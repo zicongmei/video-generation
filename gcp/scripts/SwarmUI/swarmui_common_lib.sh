@@ -53,8 +53,10 @@ install_swarmui() {
     fi
     cd SwarmUI
     chmod +x launch-linux.sh
-    # We don't run it here to avoid long-running blocking process in the script.
-    # The systemd service will handle the launch and dependency installation.
+
+    echo "Installing missing Python dependencies for SwarmUI backend..."
+    local PYTHON_310=$(find_python310)
+    sudo $PYTHON_310 -m pip install torchsde sqlalchemy tqdm psutil pillow numpy scipy aiohttp yarl pyyaml transformers tokenizers safetensors torchaudio comfy-kitchen
 }
 
 setup_systemd() {

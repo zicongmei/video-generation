@@ -14,21 +14,13 @@ AUTH_USER=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal
 AUTH_PASS=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/auth_password || echo "qps564")
 
 # 2. Dependencies and cleanup
-install_system_dependencies
-
-echo "Stopping ComfyUI and SwarmUI services if running..."
-sudo systemctl stop comfyui || true
-sudo systemctl disable comfyui || true
-sudo systemctl stop swarmui || true
-sudo systemctl disable swarmui || true
+install_system_dependencies 
 
 echo "Cleaning up Pinokio GUI if present..."
 sudo apt-get remove -y pinokio || true
 
 echo "Cleaning up conflicting Nginx configurations..."
-sudo rm -f /etc/nginx/sites-enabled/comfyui
-sudo rm -f /etc/nginx/sites-enabled/swarmui
-sudo rm -f /etc/nginx/sites-enabled/default
+sudo rm -f /etc/nginx/sites-enabled/*
 
 echo "Cleaning up existing services on port 443..."
 sudo fuser -k 443/tcp || true
