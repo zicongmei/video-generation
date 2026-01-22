@@ -105,3 +105,28 @@ EOF
     sudo systemctl restart comfyui
 }
 
+download_wan_models() {
+    echo "Downloading specific Wan models..."
+    cd ~/ComfyUI
+    source venv/bin/activate
+    export HF_HUB_ENABLE_HF_TRANSFER=1
+
+    mkdir -p models/text_encoders models/vae models/diffusion_models
+
+    echo "Downloading Text Encoder..."
+    huggingface-cli download Comfy-Org/Wan_2.1_ComfyUI_repackaged split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors --local-dir models/text_encoders --local-dir-use-symlinks False
+    # The cli download puts it into the subdirectory matching the path in the repo, we might need to move it
+    mv models/text_encoders/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors models/text_encoders/ 2>/dev/null || true
+
+    echo "Downloading VAE..."
+    huggingface-cli download Comfy-Org/Wan_2.2_ComfyUI_Repackaged split_files/vae/wan2.2_vae.safetensors --local-dir models/vae --local-dir-use-symlinks False
+    mv models/vae/split_files/vae/wan2.2_vae.safetensors models/vae/ 2>/dev/null || true
+
+    echo "Downloading Diffusion Model..."
+    huggingface-cli download Comfy-Org/Wan_2.2_ComfyUI_Repackaged split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors --local-dir models/diffusion_models --local-dir-use-symlinks False
+    mv models/diffusion_models/split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors models/diffusion_models/ 2>/dev/null || true
+
+    # Cleanup empty split_files directory
+    rm -rf models/*/split_files
+}
+
