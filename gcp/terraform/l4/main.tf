@@ -2,6 +2,20 @@ provider "google" {
   project = var.project_id
 }
 
+locals {
+  comfyui_startup_script = <<EOF
+#!/bin/bash
+mkdir -p /tmp/comfyui
+cat <<'EOCL' > /tmp/comfyui/comfy_common_lib.sh
+${file("${path.module}/../../scripts/comfyui/comfy_common_lib.sh")}
+EOCL
+cat <<'EOS' > /tmp/comfyui/setup_comfy_auth.sh
+${file("${path.module}/../../scripts/comfyui/setup_comfy_auth.sh")}
+EOS
+bash /tmp/comfyui/setup_comfy_auth.sh
+EOF
+}
+
 resource "google_compute_instance" "vm_instance" {
   name         = var.vm_name
   machine_type = "g2-standard-8" # 8 vCPUs, 32GB RAM, 1 L4 GPU
@@ -33,10 +47,12 @@ resource "google_compute_instance" "vm_instance" {
     auth_password         = var.auth_password
   }
 
+  metadata_startup_script = var.auto_deploy ? local.comfyui_startup_script : null
+
   scheduling {
     on_host_maintenance = "TERMINATE" # Required for GPU instances
     provisioning_model  = var.use_spot ? "SPOT" : "STANDARD"
-    preemptible         = false
+    preemptible         = var.use_spot ? true : false
     automatic_restart   = var.use_spot ? false : true
   }
 }

@@ -37,3 +37,9 @@ variable "use_spot" {
   type        = bool
   default     = false
 }
+
+variable "auto_deploy" {
+  description = "Whether to automatically deploy ComfyUI"
+  type        = bool
+  default     = true
+}
