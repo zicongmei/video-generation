@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: comfyui
+  template:
+    metadata:
+      labels:
+        app: comfyui
+    spec:
+      containers:
+      - name: comfyui
+        image: ghcr.io/ai-dock/comfyui:latest-cuda
+        ports:
+        - containerPort: 8188
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            memory: 32Gi
+            cpu: "8"
+          requests:
+            nvidia.com/gpu: 1
+            memory: 32Gi
+            cpu: "8"
+        env:
+        - name: DIRECT_ADDRESS
+          value: "127.0.0.1"
+        - name: AUTH_MODE
+          value: "none"
+      - name: nginx-sidecar
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        - name: auth-vol
+          mountPath: /etc/nginx/auth
+          readOnly: true
+        - name: certs
+          mountPath: /etc/nginx/certs
+          readOnly: true
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-l4
+        cloud.google.com/gke-spot: "true"
+      tolerations:
+      - key: "cloud.google.com/gke-spot"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      volumes:
+      - name: nginx-conf
+        configMap:
+          name: nginx-config
+      - name: auth-vol
+        secret:
+          secretName: nginx-auth
+          items:
+          - key: htpasswd
+            path: htpasswd
+      - name: certs
+        secret:
+          secretName: nginx-tls
