@@ -10,8 +10,8 @@ echo "Starting setup (Authenticated) for Pinokio..."
 
 # 1. Fetch credentials from metadata
 echo "Fetching credentials from metadata..."
-AUTH_USER=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/auth_username || echo "root")
-AUTH_PASS=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/auth_password || echo "qps564")
+AUTH_USER=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/auth_username)
+AUTH_PASS=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/auth_password)
 
 # 2. Dependencies and cleanup
 install_system_dependencies 
