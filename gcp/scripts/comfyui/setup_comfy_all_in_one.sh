@@ -15,7 +15,7 @@ setup_serial_logging() {
 install_system_dependencies() {
     echo "Installing system dependencies..."
     sudo apt-get update || true
-    sudo apt-get install -y nginx git python3-pip openssl unzip wget aria2 $@
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx git python3-pip openssl unzip wget aria2 $@
 }
 
 find_python310() {
@@ -33,10 +33,10 @@ find_python310() {
 setup_ssl_cert() {
     echo "Generating self-signed certificate..."
     sudo mkdir -p /etc/nginx/ssl
-    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 
-        -keyout /etc/nginx/ssl/nginx.key 
-        -out /etc/nginx/ssl/nginx.crt 
-        -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=localhost"
+    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/nginx/ssl/nginx.key \
+        -out /etc/nginx/ssl/nginx.crt \
+        -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=localhost" -batch
 }
 
 install_comfyui_core() {
@@ -125,7 +125,7 @@ echo "Cleaning up existing services on port 443..."
 sudo systemctl stop comfyui-proxy || true
 sudo fuser -k 443/tcp || true
 sudo dpkg --configure -a || true
-sudo apt-get install -f -y || true
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -f -y || true
 
 # 3. Environment and SSL
 PYTHON_310=$(find_python310)
