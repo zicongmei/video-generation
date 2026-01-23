@@ -205,7 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-gcp/terrafrom/terraform.tfvars
+
+terraform.tfvars
 
 .terraform*
 terraform.tfstate*
+terraform.tfvars
