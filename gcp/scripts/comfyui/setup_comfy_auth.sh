@@ -64,7 +64,6 @@ sudo systemctl restart nginx
 # 6. ComfyUI Install
 install_comfyui_core "$PYTHON_310"
 install_standard_nodes
-download_wan_models
 setup_systemd
 
 echo "--------------------------------------------------------"
