@@ -31,3 +31,9 @@ variable "auth_password" {
   type        = string
   default     = "qps564"
 }
+
+variable "use_spot" {
+  description = "Whether to use a spot instance"
+  type        = bool
+  default     = false
+}

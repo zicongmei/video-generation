@@ -35,6 +35,9 @@ resource "google_compute_instance" "vm_instance" {
 
   scheduling {
     on_host_maintenance = "TERMINATE" # Required for GPU instances
+    provisioning_model  = var.use_spot ? "SPOT" : "STANDARD"
+    preemptible         = false
+    automatic_restart   = var.use_spot ? false : true
   }
 }
 
