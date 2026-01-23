@@ -92,7 +92,7 @@ After=network.target nginx.service
 Type=simple
 User=$USER
 WorkingDirectory=$HOME/ComfyUI
-ExecStart=$HOME/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --highvram
+ExecStart=$HOME/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --normalvram
 Restart=always
 RestartSec=10
 
