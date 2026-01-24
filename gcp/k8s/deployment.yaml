@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: comfyui
-        image: ghcr.io/ai-dock/comfyui:latest-cuda
+        image: zicongmei/comfyui:latest
         ports:
         - containerPort: 8188
         resources:
