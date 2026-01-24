@@ -33,7 +33,20 @@ resource "google_compute_instance" "vm_instance" {
     auth_password         = var.auth_password
   }
 
-  metadata_startup_script = var.auto_deploy ? file("${path.module}/../../scripts/comfyui/setup_comfy_all_in_one.sh") : null
+  metadata_startup_script = var.auto_deploy ? format("%s\n%s",
+    file("${path.module}/../../scripts/comfyui/setup_comfy_all_in_one.sh"),
+    var.download_models ? <<-EOT
+      # Download models if requested
+      echo "Downloading models for ComfyUI..."
+      mkdir -p /root/ComfyUI/models/text_encoders /root/ComfyUI/models/loras /root/ComfyUI/models/diffusion_models /root/ComfyUI/models/vae
+
+      wget -O /root/ComfyUI/models/text_encoders/qwen_3_4b.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors"
+      wget -O /root/ComfyUI/models/loras/pixel_art_style_z_image_turbo.safetensors "https://huggingface.co/tarn59/pixel_art_style_lora_z_image_turbo/resolve/main/pixel_art_style_z_image_turbo.safetensors"
+      wget -O /root/ComfyUI/models/diffusion_models/z_image_turbo_bf16.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors"
+      wget -O /root/ComfyUI/models/vae/ae.safetensors "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors"
+    EOT
+    : ""
+  ) : null
 
   scheduling {
     on_host_maintenance = "TERMINATE" # Required for GPU instances

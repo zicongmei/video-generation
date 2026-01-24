@@ -1,3 +1,4 @@
-project_id = "your-project-id"
-zone       = "us-central1-a"
-vm_name    = "video-gen-vm"
+project_id      = "your-project-id"
+zone            = "us-central1-a"
+vm_name         = "video-gen-vm"
+download_models = false

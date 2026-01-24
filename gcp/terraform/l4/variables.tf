@@ -43,3 +43,9 @@ variable "auto_deploy" {
   type        = bool
   default     = true
 }
+
+variable "download_models" {
+  description = "Whether to automatically download models"
+  type        = bool
+  default     = true
+}
