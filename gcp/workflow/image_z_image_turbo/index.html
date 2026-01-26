@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Image-Turbo Generator</title>
+    <link rel="stylesheet" href="resource/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Z-Image-Turbo Generator</h1>
+        <div class="server-config">
+            <input type="text" id="server_ip" placeholder="VM_IP:443" value="">
+            <div class="auth-group" style="margin-top: 10px;">
+                <input type="text" id="username" placeholder="Username" style="width: 38%;">
+                <input type="password" id="password" placeholder="Password" style="width: 38%;">
+            </div>
+            <p class="hint">Example: 34.73.142.115:443</p>
+        </div>
+        <div class="input-group">
+            <textarea id="prompt" placeholder="Enter your prompt here...">Latina female with thick wavy hair, harbor boats and pastel houses behind. Breezy seaside light, warm tones, cinematic close-up.</textarea>
+            <button id="generate">Generate Image</button>
+        </div>
+        <div id="status"></div>
+        <div class="output-group">
+            <img id="output-image" src="" alt="Generated image will appear here" style="display: none;">
+        </div>
+    </div>
+    <script src="resource/script.js"></script>
+</body>
+</html>

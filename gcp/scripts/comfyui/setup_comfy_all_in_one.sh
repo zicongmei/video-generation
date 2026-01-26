@@ -147,9 +147,29 @@ server {
     ssl_certificate /etc/nginx/ssl/nginx.crt;
     ssl_certificate_key /etc/nginx/ssl/nginx.key;
 
+    # Allow large file uploads for models/images
+    client_max_body_size 0;
+
     location / {
+        # CORS Headers
+        add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
         auth_basic "Restricted Access";
         auth_basic_user_file /etc/nginx/.htpasswd;
+
         proxy_pass http://127.0.0.1:8188;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -168,6 +188,15 @@ sudo systemctl restart nginx
 
 # 6. ComfyUI Install
 install_comfyui_core "$PYTHON_310"
+
+echo "Pre-enabling Dev mode Options..."
+sudo mkdir -p /root/ComfyUI/user/default
+sudo tee /root/ComfyUI/user/default/comfy.settings.json <<EOF
+{
+    "Comfy.DevMode": true
+}
+EOF
+
 install_standard_nodes
 setup_systemd
 
