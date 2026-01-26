@@ -10,6 +10,32 @@ A simple, lightweight web interface to interact with the Z-Image-Turbo ComfyUI w
     - `script.js`: Frontend logic for communicating with ComfyUI.
     - `style.css`: UI styling.
 
+## Model Information
+
+These models are required for the workflow to function:
+
+- **Text Encoder**: [qwen_3_4b.safetensors](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors)
+- **LoRA**: [pixel_art_style_z_image_turbo.safetensors](https://huggingface.co/tarn59/pixel_art_style_lora_z_image_turbo/resolve/main/pixel_art_style_z_image_turbo.safetensors)
+- **Diffusion Model**: [z_image_turbo_bf16.safetensors](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors)
+- **VAE**: [ae.safetensors](https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors)
+
+### Model Storage Location
+
+Ensure models are placed in the correct directories within your ComfyUI installation:
+
+```text
+📂 ComfyUI/
+├── 📂 models/
+│   ├── 📂 text_encoders/
+│   │      └── qwen_3_4b.safetensors
+│   ├── 📂 loras/
+│   │      └── pixel_art_style_z_image_turbo.safetensors
+│   ├── 📂 diffusion_models/
+│   │      └── z_image_turbo_bf16.safetensors
+│   └── 📂 vae/
+│          └── ae.safetensors
+```
+
 ## Prerequisites
 
 1.  **ComfyUI Backend**: A running ComfyUI instance (e.g., your GCP L4 VM).
