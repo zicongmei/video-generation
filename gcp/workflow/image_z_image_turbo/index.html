@@ -54,6 +54,18 @@
             <button id="generate" style="margin-top: 20px;">Generate Image</button>
         </div>
         <div id="status"></div>
+
+        <div class="debug-section" style="margin-top: 20px; text-align: left;">
+            <button id="toggle_debug" style="background: #6c757d; font-size: 0.8rem; padding: 5px 10px;">Show Debug Info</button>
+            <div id="debug_info" style="display: none; margin-top: 10px; background: #212529; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto;">
+                <div><strong>Time taken:</strong> <span id="debug_time">N/A</span></div>
+                <div style="margin-top: 10px;"><strong>API Request:</strong></div>
+                <pre id="debug_request" style="white-space: pre-wrap; word-break: break-all; margin: 0;"></pre>
+                <div style="margin-top: 10px;"><strong>API Response (History):</strong></div>
+                <pre id="debug_response" style="white-space: pre-wrap; word-break: break-all; margin: 0;"></pre>
+            </div>
+        </div>
+
         <div class="output-group" id="image-container">
             <!-- Images will be appended here -->
         </div>

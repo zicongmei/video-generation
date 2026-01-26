@@ -170,7 +170,19 @@ async function get_history(prompt_id) {
     return await response.json();
 }
 
+document.getElementById('toggle_debug').onclick = function() {
+    const debug_info = document.getElementById('debug_info');
+    if (debug_info.style.display === 'none') {
+        debug_info.style.display = 'block';
+        this.innerText = 'Hide Debug Info';
+    } else {
+        debug_info.style.display = 'none';
+        this.innerText = 'Show Debug Info';
+    }
+};
+
 async function generate() {
+    const start_time = performance.now();
     const prompt_text = document.getElementById('prompt').value;
     const width = parseInt(document.getElementById('width').value);
     const height = parseInt(document.getElementById('height').value);
@@ -240,6 +252,9 @@ async function generate() {
             if (sampler_node.inputs.noise_seed !== undefined) sampler_node.inputs.noise_seed = seed;
         }
 
+        // Debug: Show Request
+        document.getElementById('debug_request').innerText = JSON.stringify(api_workflow, null, 2);
+
         status_div.innerText = 'Queueing prompt...';
         const queued = await queue_prompt(api_workflow);
         const prompt_id = queued.prompt_id;
@@ -252,6 +267,12 @@ async function generate() {
             const history = await get_history(prompt_id);
             if (history[prompt_id]) {
                 completed = true;
+
+                // Debug: Show Response and Time
+                const end_time = performance.now();
+                document.getElementById('debug_time').innerText = ((end_time - start_time) / 1000).toFixed(2) + ' seconds';
+                document.getElementById('debug_response').innerText = JSON.stringify(history[prompt_id], null, 2);
+
                 const outputs = history[prompt_id].outputs;
                 
                 let images_found = 0;
