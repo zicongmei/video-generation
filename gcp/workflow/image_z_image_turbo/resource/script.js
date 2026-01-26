@@ -63,52 +63,62 @@ async function get_history(prompt_id) {
 
 async function generate() {
     const prompt_text = document.getElementById('prompt').value;
+    const width = parseInt(document.getElementById('width').value);
+    const height = parseInt(document.getElementById('height').value);
+    const batch_size = parseInt(document.getElementById('batch_size').value);
+    let seed = parseInt(document.getElementById('seed').value);
+    
+    if (seed === -1) {
+        seed = Math.floor(Math.random() * 1000000000000000);
+    }
+
     const generate_btn = document.getElementById('generate');
     const status_div = document.getElementById('status');
-    const output_img = document.getElementById('output-image');
+    const image_container = document.getElementById('image-container');
 
     generate_btn.disabled = true;
     status_div.innerText = 'Loading workflow...';
+    image_container.innerHTML = ''; // Clear previous images
 
     try {
         const response = await fetch('resource/workflow.json');
-        let workflow = await response.json();
+        let api_workflow = await response.json();
 
-        // Handle UI format (has .nodes) vs API format (is a dictionary)
-        let api_workflow = workflow;
-        if (workflow.nodes) {
-            status_div.innerText = 'Error: UI format detected. Please export as API Format (Dev mode).';
-            throw new Error("ComfyUI UI format detected. This script requires 'API Format' JSON. Enable 'Dev mode' in ComfyUI settings and 'Save (API Format)'.");
-        }
-
-        // Find the prompt node (ID 58 or by class_type/title)
+        // Find and update nodes
         let prompt_node = null;
-        if (api_workflow["58"]) {
-            prompt_node = api_workflow["58"];
-        } else {
-            for (const id in api_workflow) {
-                const node = api_workflow[id];
-                if (node.class_type === "PrimitiveStringMultiline" || node._meta?.title === "Prompt") {
-                    prompt_node = node;
-                    break;
-                }
+        let size_node = null;
+        let sampler_node = null;
+
+        for (const id in api_workflow) {
+            const node = api_workflow[id];
+            if (node.class_type === "PrimitiveStringMultiline" || node._meta?.title === "Prompt") {
+                prompt_node = node;
+            }
+            if (node.class_type === "EmptySD3LatentImage" || node.class_type === "EmptyLatentImage") {
+                size_node = node;
+            }
+            if (node.class_type === "KSampler" || node.class_type === "KSamplerAdvanced") {
+                sampler_node = node;
             }
         }
 
-        if (!prompt_node) throw new Error("Could not find prompt node in workflow.");
-        
-        // Update the prompt value
-        // For PrimitiveStringMultiline, the input is usually 'string' or 'text'
-        if (prompt_node.inputs.string !== undefined) prompt_node.inputs.string = prompt_text;
-        else if (prompt_node.inputs.text !== undefined) prompt_node.inputs.text = prompt_text;
-        else {
-            // Fallback: update the first input that is a string
-            for (const key in prompt_node.inputs) {
-                if (typeof prompt_node.inputs[key] === 'string') {
-                    prompt_node.inputs[key] = prompt_text;
-                    break;
-                }
-            }
+        // Update Prompt
+        if (prompt_node) {
+            if (prompt_node.inputs.string !== undefined) prompt_node.inputs.string = prompt_text;
+            else if (prompt_node.inputs.text !== undefined) prompt_node.inputs.text = prompt_text;
+        }
+
+        // Update Size
+        if (size_node) {
+            size_node.inputs.width = width;
+            size_node.inputs.height = height;
+            size_node.inputs.batch_size = batch_size;
+        }
+
+        // Update Seed
+        if (sampler_node) {
+            sampler_node.inputs.seed = seed;
+            if (sampler_node.inputs.noise_seed !== undefined) sampler_node.inputs.noise_seed = seed;
         }
 
         status_div.innerText = 'Queueing prompt...';
@@ -124,20 +134,26 @@ async function generate() {
             if (history[prompt_id]) {
                 completed = true;
                 const outputs = history[prompt_id].outputs;
-                // Look for SaveImage output (ID 9 or 60)
-                let image_data = null;
+                
+                let images_found = 0;
                 for (const node_id in outputs) {
                     if (outputs[node_id].images) {
-                        image_data = outputs[node_id].images[0];
-                        break;
+                        for (const image_data of outputs[node_id].images) {
+                            const img_url = await get_image(image_data.filename, image_data.subfolder, image_data.type);
+                            const img = document.createElement('img');
+                            img.src = img_url;
+                            img.className = 'generated-image';
+                            img.style.maxWidth = '100%';
+                            img.style.marginBottom = '10px';
+                            img.style.borderRadius = '4px';
+                            image_container.appendChild(img);
+                            images_found++;
+                        }
                     }
                 }
 
-                if (image_data) {
-                    const img_url = await get_image(image_data.filename, image_data.subfolder, image_data.type);
-                    output_img.src = img_url;
-                    output_img.style.display = 'block';
-                    status_div.innerText = 'Done!';
+                if (images_found > 0) {
+                    status_div.innerText = `Done! Generated ${images_found} images.`;
                 } else {
                     status_div.innerText = 'Generation failed: No image output found.';
                 }
@@ -154,3 +170,52 @@ async function generate() {
 }
 
 document.getElementById('generate').addEventListener('click', generate);
+
+document.getElementById('toggle_password').addEventListener('click', function() {
+    const pass_input = document.getElementById('password');
+    if (pass_input.type === 'password') {
+        pass_input.type = 'text';
+        this.innerText = 'Hide';
+    } else {
+        pass_input.type = 'password';
+        this.innerText = 'Show';
+    }
+});
+
+// Persistence Logic
+function save_config() {
+    const config = {
+        server_ip: document.getElementById('server_ip').value,
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+        width: document.getElementById('width').value,
+        height: document.getElementById('height').value,
+        batch_size: document.getElementById('batch_size').value,
+        seed: document.getElementById('seed').value,
+        prompt: document.getElementById('prompt').value
+    };
+    localStorage.setItem('comfy_config', JSON.stringify(config));
+}
+
+function load_config() {
+    const saved = localStorage.getItem('comfy_config');
+    if (saved) {
+        const config = JSON.parse(saved);
+        if (config.server_ip) document.getElementById('server_ip').value = config.server_ip;
+        if (config.username) document.getElementById('username').value = config.username;
+        if (config.password) document.getElementById('password').value = config.password;
+        if (config.width) document.getElementById('width').value = config.width;
+        if (config.height) document.getElementById('height').value = config.height;
+        if (config.batch_size) document.getElementById('batch_size').value = config.batch_size;
+        if (config.seed) document.getElementById('seed').value = config.seed;
+        if (config.prompt) document.getElementById('prompt').value = config.prompt;
+    }
+}
+
+// Add event listeners to save on change
+['server_ip', 'username', 'password', 'width', 'height', 'batch_size', 'seed', 'prompt'].forEach(id => {
+    document.getElementById(id).addEventListener('input', save_config);
+});
+
+// Load on startup
+window.addEventListener('load', load_config);
