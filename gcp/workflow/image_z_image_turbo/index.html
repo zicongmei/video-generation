@@ -7,9 +7,18 @@
     <link rel="stylesheet" href="resource/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Z-Image-Turbo Generator</h1>
-        <div class="server-config">
+    <div class="main-wrapper">
+        <div id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h2>History</h2>
+                <button id="clear_history">Clear All</button>
+            </div>
+            <div id="history_list" class="history-list"></div>
+        </div>
+        
+        <div class="container">
+            <h1>Z-Image-Turbo Generator</h1>
+            <div class="server-config">
             <input type="text" id="server_ip" placeholder="VM_IP:443" value="">
             <div class="auth-group" style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
                 <input type="text" id="username" placeholder="Username" style="width: 35%;">
@@ -48,7 +57,8 @@
         <div class="output-group" id="image-container">
             <!-- Images will be appended here -->
         </div>
-    </div>
+        </div> <!-- Close container -->
+    </div> <!-- Close main-wrapper -->
     <script src="resource/script.js"></script>
 </body>
 </html>

@@ -45,14 +45,123 @@ async function queue_prompt(prompt) {
     return await response.json();
 }
 
-async function get_image(filename, subfolder, type) {
+async function get_image_blob(filename, subfolder, type) {
     const query = new URLSearchParams({ filename, subfolder, type }).toString();
     const response = await fetch(get_api_url(`/view?${query}`), {
         headers: get_auth_header()
     });
-    const blob = await response.blob();
+    return await response.blob();
+}
+
+async function get_image(filename, subfolder, type) {
+    const blob = await get_image_blob(filename, subfolder, type);
     return URL.createObjectURL(blob);
 }
+
+// IndexedDB logic
+const DB_NAME = 'ComfyUIHistory';
+const DB_VERSION = 1;
+const STORE_NAME = 'images';
+let db;
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            resolve(db);
+        };
+        request.onerror = (e) => reject(e);
+    });
+}
+
+async function saveToHistory(imageBlob, prompt) {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const item = {
+        imageBlob,
+        prompt,
+        timestamp: new Date().getTime()
+    };
+    return new Promise((resolve, reject) => {
+        const request = store.add(item);
+        request.onsuccess = () => {
+            item.id = request.result;
+            addToSidebar(item);
+            resolve();
+        };
+        request.onerror = (e) => reject(e);
+    });
+}
+
+function addToSidebar(item) {
+    const historyList = document.getElementById('history_list');
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.dataset.id = item.id;
+    
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(item.imageBlob);
+    img.title = item.prompt;
+    img.onclick = () => {
+        document.getElementById('prompt').value = item.prompt;
+        // Also show it in main view if needed
+        const image_container = document.getElementById('image-container');
+        image_container.innerHTML = '';
+        const mainImg = document.createElement('img');
+        mainImg.src = img.src;
+        mainImg.className = 'generated-image';
+        image_container.appendChild(mainImg);
+    };
+    
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.innerHTML = '×';
+    delBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteFromHistory(item.id, div);
+    };
+    
+    div.appendChild(img);
+    div.appendChild(delBtn);
+    historyList.insertBefore(div, historyList.firstChild);
+}
+
+async function loadHistory() {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => {
+        const items = request.result;
+        items.sort((a, b) => a.timestamp - b.timestamp);
+        items.forEach(addToSidebar);
+    };
+}
+
+async function deleteFromHistory(id, element) {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => {
+        element.remove();
+    };
+}
+
+document.getElementById('clear_history').onclick = () => {
+    if (confirm('Clear all history?')) {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        store.clear().onsuccess = () => {
+            document.getElementById('history_list').innerHTML = '';
+        };
+    }
+};
 
 async function get_history(prompt_id) {
     const response = await fetch(get_api_url(`/history/${prompt_id}`), {
@@ -104,8 +213,18 @@ async function generate() {
 
         // Update Prompt
         if (prompt_node) {
-            if (prompt_node.inputs.string !== undefined) prompt_node.inputs.string = prompt_text;
+            if (prompt_node.inputs.value !== undefined) prompt_node.inputs.value = prompt_text;
+            else if (prompt_node.inputs.string !== undefined) prompt_node.inputs.string = prompt_text;
             else if (prompt_node.inputs.text !== undefined) prompt_node.inputs.text = prompt_text;
+            else {
+                // Fallback: update the first input that is a string
+                for (const key in prompt_node.inputs) {
+                    if (typeof prompt_node.inputs[key] === 'string') {
+                        prompt_node.inputs[key] = prompt_text;
+                        break;
+                    }
+                }
+            }
         }
 
         // Update Size
@@ -139,7 +258,9 @@ async function generate() {
                 for (const node_id in outputs) {
                     if (outputs[node_id].images) {
                         for (const image_data of outputs[node_id].images) {
-                            const img_url = await get_image(image_data.filename, image_data.subfolder, image_data.type);
+                            const blob = await get_image_blob(image_data.filename, image_data.subfolder, image_data.type);
+                            const img_url = URL.createObjectURL(blob);
+                            
                             const img = document.createElement('img');
                             img.src = img_url;
                             img.className = 'generated-image';
@@ -147,6 +268,10 @@ async function generate() {
                             img.style.marginBottom = '10px';
                             img.style.borderRadius = '4px';
                             image_container.appendChild(img);
+                            
+                            // Save to history
+                            saveToHistory(blob, prompt_text);
+                            
                             images_found++;
                         }
                     }
@@ -218,4 +343,7 @@ function load_config() {
 });
 
 // Load on startup
-window.addEventListener('load', load_config);
+window.addEventListener('load', () => {
+    load_config();
+    initDB().then(loadHistory);
+});
