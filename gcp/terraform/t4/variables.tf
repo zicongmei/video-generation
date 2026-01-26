@@ -43,3 +43,9 @@ variable "auto_deploy" {
   type        = bool
   default     = true
 }
+
+variable "machine_type" {
+  description = "The instance type to use"
+  type        = string
+  default     = "n1-standard-8"
+}

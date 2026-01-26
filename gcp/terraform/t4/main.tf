@@ -4,7 +4,7 @@ provider "google" {
 
 resource "google_compute_instance" "vm_instance" {
   name         = var.vm_name
-  machine_type = "n1-standard-8"
+  machine_type = var.machine_type
   zone         = var.zone
   tags         = ["https-server"]
 

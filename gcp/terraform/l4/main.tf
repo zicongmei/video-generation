@@ -4,7 +4,7 @@ provider "google" {
 
 resource "google_compute_instance" "vm_instance" {
   name         = var.vm_name
-  machine_type = "g2-standard-8" # 8 vCPUs, 32GB RAM, 1 L4 GPU
+  machine_type = var.machine_type
   zone         = var.zone
   tags         = ["https-server"]
 

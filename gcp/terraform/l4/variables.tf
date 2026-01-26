@@ -45,7 +45,23 @@ variable "auto_deploy" {
 }
 
 variable "download_models" {
+
   description = "Whether to automatically download models"
-  type        = bool
-  default     = true
+
+  type = bool
+
+  default = true
+
+}
+
+
+
+variable "machine_type" {
+
+  description = "The instance type to use"
+
+  type = string
+
+  default = "g2-standard-8"
+
 }
