@@ -35,7 +35,7 @@ variable "auth_password" {
 variable "use_spot" {
   description = "Whether to use a spot instance"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "auto_deploy" {
