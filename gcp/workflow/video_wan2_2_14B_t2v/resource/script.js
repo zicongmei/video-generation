@@ -57,7 +57,7 @@ async function get_history(prompt_id) {
 }
 
 // IndexedDB logic
-const DB_NAME = 'LTX2History';
+const DB_NAME = 'Wan22History';
 const DB_VERSION = 1;
 const STORE_NAME = 'videos';
 let db;
@@ -221,29 +221,26 @@ async function generate() {
         const response = await fetch('resource/workflow.json');
         let api_workflow = await response.json();
 
-        // Update workflow parameters
+        // Update workflow parameters based on Wan 2.2 workflow structure
         // Prompt
-        if (api_workflow["92:3"]) api_workflow["92:3"].inputs.text = prompt_text;
+        if (api_workflow["89"]) api_workflow["89"].inputs.text = prompt_text;
         
         // Negative Prompt
-        if (api_workflow["92:4"]) api_workflow["92:4"].inputs.text = negative_prompt_text;
+        if (api_workflow["72"]) api_workflow["72"].inputs.text = negative_prompt_text;
         
-        // Size
-        if (api_workflow["92:89"]) {
-            api_workflow["92:89"].inputs.width = width;
-            api_workflow["92:89"].inputs.height = height;
+        // Size & Length
+        if (api_workflow["74"]) {
+            api_workflow["74"].inputs.width = width;
+            api_workflow["74"].inputs.height = height;
+            api_workflow["74"].inputs.length = length;
         }
 
-        // Length
-        if (api_workflow["92:62"]) api_workflow["92:62"].inputs.value = length;
-
         // FPS
-        if (api_workflow["92:102"]) api_workflow["92:102"].inputs.value = fps;
-        if (api_workflow["92:99"]) api_workflow["92:99"].inputs.value = fps;
+        if (api_workflow["88"]) api_workflow["88"].inputs.fps = fps;
 
         // Seed
-        if (api_workflow["92:11"]) api_workflow["92:11"].inputs.noise_seed = seed;
-        if (api_workflow["92:67"]) api_workflow["92:67"].inputs.noise_seed = seed;
+        if (api_workflow["81"]) api_workflow["81"].inputs.noise_seed = seed;
+        if (api_workflow["78"]) api_workflow["78"].inputs.noise_seed = seed;
 
         document.getElementById('debug_request').innerText = JSON.stringify(api_workflow, null, 2);
 
@@ -267,7 +264,6 @@ async function generate() {
                 for (const node_id in outputs) {
                     const node_output = outputs[node_id];
                     
-                    // ComfyUI is inconsistent: SaveVideo can return in 'videos', 'gifs', or even 'images'
                     const all_outputs = [
                         ...(node_output.videos || []),
                         ...(node_output.gifs || []),
@@ -294,7 +290,7 @@ async function generate() {
                         } else {
                             const img = document.createElement('img');
                             img.src = url;
-                            img.className = 'generated-video'; // use same class for styling
+                            img.className = 'generated-video'; 
                             video_container.appendChild(img);
                             saveToHistory(blob, prompt_text, 'image');
                         }
@@ -334,11 +330,11 @@ function save_config() {
         prompt: document.getElementById('prompt').value,
         negative_prompt: document.getElementById('negative_prompt').value
     };
-    localStorage.setItem('ltx2_config', JSON.stringify(config));
+    localStorage.setItem('wan22_config', JSON.stringify(config));
 }
 
 function load_config() {
-    const saved = localStorage.getItem('ltx2_config');
+    const saved = localStorage.getItem('wan22_config');
     if (saved) {
         const config = JSON.parse(saved);
         if (config.server_ip) document.getElementById('server_ip').value = config.server_ip;
