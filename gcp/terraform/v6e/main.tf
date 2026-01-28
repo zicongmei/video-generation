@@ -21,8 +21,9 @@ resource "google_tpu_v2_vm" "tpu_vm" {
   }
 
   metadata = {
-    auth_username = var.auth_username
-    auth_password = var.auth_password
+    auth_username  = var.auth_username
+    auth_password  = var.auth_password
+    startup-script = file("${path.module}/../../scripts/comfyui_tpu/setup_comfy_tpu.sh")
   }
 }
 

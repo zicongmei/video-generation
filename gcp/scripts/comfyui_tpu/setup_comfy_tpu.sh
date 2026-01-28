@@ -1,20 +1,20 @@
 #!/bin/bash
 set -e
 
-# Configuration
-INSTALL_DIR="$HOME/ComfyUI"
+# Configuration - Changed to /root for startup-script execution
+INSTALL_DIR="/root/ComfyUI"
 PYTHON_BIN="python3.12"
 
 install_system_dependencies() {
     echo "Installing system dependencies..."
-    sudo apt-get update || true
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx git python3.12-venv python3.12-dev python3-pip openssl unzip wget aria2 apache2-utils
+    apt-get update || true
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nginx git python3.12-venv python3.12-dev python3-pip openssl unzip wget aria2 apache2-utils
 }
 
 setup_ssl_cert() {
     echo "Generating self-signed certificate..."
-    sudo mkdir -p /etc/nginx/ssl
-    sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    mkdir -p /etc/nginx/ssl
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout /etc/nginx/ssl/nginx.key \
         -out /etc/nginx/ssl/nginx.crt \
         -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=localhost"
@@ -22,7 +22,7 @@ setup_ssl_cert() {
 
 install_comfyui_core() {
     echo "Installing ComfyUI core..."
-    cd ~
+    cd /root
     if [ ! -d "ComfyUI" ]; then
         git clone https://github.com/comfyanonymous/ComfyUI.git
     fi
@@ -57,7 +57,7 @@ get_node() {
 
 install_standard_nodes() {
     echo "Installing custom nodes..."
-    cd ~/ComfyUI
+    cd /root/ComfyUI
     get_node "ltdrdata" "ComfyUI-Manager"
     get_node "kijai" "ComfyUI-WanVideoWrapper"
     get_node "Kosinkadink" "ComfyUI-VideoHelperSuite"
@@ -65,7 +65,8 @@ install_standard_nodes() {
 }
 
 setup_nginx() {
-    echo "Setting up Nginx with Basic Auth and CORS (L4 GPU Parity)..."
+    echo "Setting up Nginx with Basic Auth, CORS, and Rate Limiting (10r/s)..."
+    
     AUTH_USER=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/auth_username || echo "admin")
     AUTH_PASS=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/auth_password || echo "admin")
 
@@ -73,9 +74,9 @@ setup_nginx() {
     if [[ "$AUTH_PASS" == *"html"* ]] || [ -z "$AUTH_PASS" ]; then AUTH_PASS="admin"; fi
 
     echo "Using username: $AUTH_USER"
-    sudo htpasswd -bc /etc/nginx/.htpasswd "$AUTH_USER" "$AUTH_PASS"
+    htpasswd -bc /etc/nginx/.htpasswd "$AUTH_USER" "$AUTH_PASS"
 
-    sudo tee /etc/nginx/sites-available/comfyui <<'EOF'
+    tee /etc/nginx/sites-available/comfyui <<'EOF'
 server {
     listen 443 ssl;
     server_name _;
@@ -85,6 +86,9 @@ server {
     client_max_body_size 0;
 
     location / {
+        # Rate Limiting
+        limit_req zone=mylimit burst=20 nodelay;
+
         # CORS Headers
         add_header 'Access-Control-Allow-Origin' '$http_origin' always;
         add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
@@ -115,35 +119,41 @@ server {
     }
 }
 EOF
-    sudo ln -sf /etc/nginx/sites-available/comfyui /etc/nginx/sites-enabled/
-    sudo rm -f /etc/nginx/sites-enabled/default
-    sudo systemctl restart nginx
+    ln -sf /etc/nginx/sites-available/comfyui /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+    systemctl restart nginx
 }
 
 setup_systemd() {
     echo "Creating systemd service..."
-    sudo tee /etc/systemd/system/comfyui.service <<EOF
+    tee /etc/systemd/system/comfyui.service <<EOF
 [Unit]
 Description=ComfyUI TPU Backend
 After=network.target nginx.service
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=$HOME/ComfyUI
+User=root
+WorkingDirectory=/root/ComfyUI
 Environment="PJRT_DEVICE=TPU"
 Environment="XLA_USE_BF16=1"
-ExecStart=$HOME/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --cpu
+ExecStart=/root/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --cpu
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
 EOF
-    sudo systemctl daemon-reload
-    sudo systemctl enable comfyui
-    sudo systemctl restart comfyui
+    systemctl daemon-reload
+    systemctl enable comfyui
+    systemctl restart comfyui
 }
+
+# Ensure we are root
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
 
 install_system_dependencies
 setup_ssl_cert
@@ -152,4 +162,4 @@ install_standard_nodes
 setup_nginx
 setup_systemd
 
-echo "ComfyUI TPU Setup complete with Nginx Auth and CORS parity!"
+echo "ComfyUI TPU Setup complete with Nginx Auth, CORS, and Rate Limiting!"

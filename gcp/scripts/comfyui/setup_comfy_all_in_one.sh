@@ -151,6 +151,9 @@ server {
     client_max_body_size 0;
 
     location / {
+        # Rate Limiting
+        limit_req zone=mylimit burst=20 nodelay;
+
         # CORS Headers
         add_header 'Access-Control-Allow-Origin' '$http_origin' always;
         add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
