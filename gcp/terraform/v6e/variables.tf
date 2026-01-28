@@ -14,6 +14,12 @@ variable "vm_name" {
   type        = string
 }
 
+variable "auth_username" {
+  description = "Username for authentication"
+  type        = string
+  default     = "root"
+}
+
 variable "auth_password" {
   description = "Password for authentication"
   type        = string
