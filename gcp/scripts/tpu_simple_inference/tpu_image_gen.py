@@ -6,6 +6,7 @@ from diffusers import FluxPipeline
 from PIL import Image
 from pathlib import Path
 import numpy as np
+import time
 
 def post_process_image(image_tensor):
     # Post-processing from diffusers
@@ -13,9 +14,9 @@ def post_process_image(image_tensor):
     image = (image_tensor / 2 + 0.5).clamp(0, 1)
     image = image.cpu().permute(0, 2, 3, 1).float().numpy()
     image = (image * 255).round().astype("uint8")
-    return Image.fromarray(image[0])
+    return [Image.fromarray(img) for img in image]
 
-def generate_images(num_images):
+def generate_images(num_images, batch_size):
     # 1. Setup the TPU device
     device = xm.xla_device()
     print(f"Using device: {device}")
@@ -41,8 +42,6 @@ def generate_images(num_images):
         pipeline.text_encoder_2.to("cpu", dtype=torch.bfloat16)
         
         print(f"Pipeline device: {pipeline.device}")
-        print(f"Transformer dtype: {pipeline.transformer.dtype}")
-        print(f"VAE dtype: {pipeline.vae.dtype}")
 
     except Exception as e:
         print(f"Error loading model: {e}")
@@ -56,13 +55,21 @@ def generate_images(num_images):
     output_dir = Path("output_images_flux")
     output_dir.mkdir(exist_ok=True)
     
-    print(f"Generating {num_images} images...")
+    print(f"Generating {num_images} images with batch size {batch_size}...")
     
-    for i in range(num_images):
-        print(f"Generating image {i+1}/{num_images}...")
+    total_batches = (num_images + batch_size - 1) // batch_size
+    start_all = time.time()
+    
+    for b in range(total_batches):
+        current_batch_size = min(batch_size, num_images - b * batch_size)
+        print(f"Processing batch {b+1}/{total_batches} (Batch Size: {current_batch_size})...")
         
+        start_batch = time.time()
         with torch.no_grad():
-            print("Encoding prompt...")
+            print(f"Encoding prompts for batch of {current_batch_size}...")
+            # Create a list of prompts for the batch
+            batch_prompts = [prompt] * current_batch_size
+            
             # Move CLIP to CPU temporarily for joint encoding
             pipeline.text_encoder.to("cpu")
             (
@@ -70,20 +77,19 @@ def generate_images(num_images):
                 pooled_prompt_embeds,
                 text_ids,
             ) = pipeline.encode_prompt(
-                prompt=prompt,
-                prompt_2=prompt,
+                prompt=batch_prompts,
+                prompt_2=batch_prompts,
                 device="cpu",
                 max_sequence_length=512,
             )
             pipeline.text_encoder.to(device)
             
-            print("Moving embeddings to TPU and forcing bfloat16...")
+            print("Moving embeddings to TPU...")
             prompt_embeds = prompt_embeds.to(device, dtype=torch.bfloat16)
             pooled_prompt_embeds = pooled_prompt_embeds.to(device, dtype=torch.bfloat16)
 
             print("Running transformer inference on TPU...")
-            height, width = 512, 512
-            # Explicitly call the pipeline
+            height, width = 1024, 1024
             latents = pipeline(
                 prompt_embeds=prompt_embeds,
                 pooled_prompt_embeds=pooled_prompt_embeds,
@@ -94,8 +100,7 @@ def generate_images(num_images):
                 height=height,
             ).images
             
-            print(f"Latents dtype before decode: {latents.dtype}")
-            # Force latents to bfloat16 before VAE decode to match VAE weights
+            # Force latents to bfloat16 before VAE decode
             latents = latents.to(device, dtype=torch.bfloat16)
             
             # Unpack latents
@@ -106,20 +111,26 @@ def generate_images(num_images):
                 pipeline.vae_scale_factor
             )
             
-            print(f"Unpacked latents shape: {latents.shape}, dtype: {latents.dtype}")
-            
-            print("Decoding latents with VAE on TPU...")
+            print(f"Decoding {current_batch_size} latents with VAE on TPU...")
+            # VAE scaling and shift factor are required for Flux
+            latents = (latents / pipeline.vae.config.scaling_factor) + pipeline.vae.config.shift_factor
             vae_output = pipeline.vae.decode(latents, return_dict=False)[0]
-            image = post_process_image(vae_output)
+            images = post_process_image(vae_output)
         
-        path = output_dir / f"flux_tpu_{i}.png"
-        image.save(path)
-        print(f"Saved: {path}")
+        for i, image in enumerate(images):
+            img_idx = b * batch_size + i
+            path = output_dir / f"flux_batch_{b}_img_{i}.png"
+            image.save(path)
+            
+        end_batch = time.time()
+        print(f"Batch {b+1} complete. (Time: {end_batch - start_batch:.2f}s)")
         
-        # Execute graph
+        # Execute graph and free memory
         xm.mark_step()
 
+    end_all = time.time()
     print(f"Successfully generated {num_images} images in total.")
+    print(f"Total time: {end_all - start_all:.2f}s")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate images using FLUX.1 on TPU with torch_xla.")
@@ -129,16 +140,20 @@ if __name__ == "__main__":
         default=1, 
         help="Number of images to generate (default: 1)"
     )
+    parser.add_argument(
+        "--batch_size", 
+        type=int, 
+        default=1, 
+        help="Batch size for parallel generation (default: 1)"
+    )
     
     args = parser.parse_args()
     
-    # Set environment variables for TPU
     os.environ["PJRT_DEVICE"] = "TPU"
-    # Disable auto-conversion and use explicit dtypes instead
     os.environ["XLA_USE_BF16"] = "0"
     
     try:
-        generate_images(args.num_images)
+        generate_images(args.num_images, args.batch_size)
     except Exception as e:
         print(f"Error during generation: {e}")
         import traceback
