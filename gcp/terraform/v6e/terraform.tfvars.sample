@@ -1,6 +1,6 @@
 project_id       = "your-project-id"
 zone             = "us-east5-b"
 vm_name          = "video-gen-tpu-v6e"
-accelerator_type = "v6e-4"
+accelerator_type = "v6e-1"
 runtime_version  = "v2-alpha-tpuv6e"
 use_spot         = true

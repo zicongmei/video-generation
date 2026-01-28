@@ -23,7 +23,7 @@ variable "auth_password" {
 variable "accelerator_type" {
   description = "The type of TPU accelerator"
   type        = string
-  default     = "v6e-4"
+  default     = "v6e-1"
 }
 
 variable "runtime_version" {

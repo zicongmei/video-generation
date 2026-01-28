@@ -216,3 +216,4 @@ tls-secret.yaml
 secret.yaml
 tls.crt
 tls.key
+.tmp/
