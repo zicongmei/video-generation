@@ -48,6 +48,28 @@ Ensure models are placed in the correct directories within your ComfyUI installa
 │          └── ltx-2-spatial-upscaler-x2-1.0.safetensors
 ```
 
+### Download Script (wget)
+
+You can use the following commands to download the models directly into your ComfyUI models directory:
+
+```bash
+# Set your ComfyUI models path
+MODELS_DIR="/root/ComfyUI/models"
+
+# Download Checkpoint
+wget -P "$MODELS_DIR/checkpoints/" https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-dev-fp8.safetensors
+
+# Download Text Encoder
+wget -P "$MODELS_DIR/text_encoders/" https://huggingface.co/Comfy-Org/ltx-2/resolve/main/split_files/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors
+
+# Download LoRAs
+wget -P "$MODELS_DIR/loras/" https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-19b-distilled-lora-384.safetensors
+wget -P "$MODELS_DIR/loras/" https://huggingface.co/Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Left/resolve/main/ltx-2-19b-lora-camera-control-dolly-left.safetensors
+
+# Download Latent Upscale Model
+wget -P "$MODELS_DIR/latent_upscale_models/" https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-spatial-upscaler-x2-1.0.safetensors
+```
+
 ## Quick Start
 
 ### 1. Start a Local Web Server

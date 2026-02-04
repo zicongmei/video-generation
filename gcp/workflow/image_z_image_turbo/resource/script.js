@@ -111,12 +111,31 @@ function addToSidebar(item) {
     img.title = item.prompt;
     img.onclick = () => {
         document.getElementById('prompt').value = item.prompt;
-        // Also show it in main view if needed
+        
+        // Show in modal
+        const modal = document.getElementById('image_modal');
+        const modalImg = document.getElementById('modal_img');
+        const captionText = document.getElementById('modal_caption');
+        
+        modal.style.display = "block";
+        modalImg.src = img.src;
+        captionText.innerHTML = item.prompt;
+
+        // Also show it in main view
         const image_container = document.getElementById('image-container');
         image_container.innerHTML = '';
         const mainImg = document.createElement('img');
         mainImg.src = img.src;
         mainImg.className = 'generated-image';
+        mainImg.style.cursor = 'pointer';
+        mainImg.onclick = () => {
+            const modal = document.getElementById('image_modal');
+            const modalImg = document.getElementById('modal_img');
+            const captionText = document.getElementById('modal_caption');
+            modal.style.display = "block";
+            modalImg.src = mainImg.src;
+            captionText.innerHTML = item.prompt;
+        };
         image_container.appendChild(mainImg);
     };
     
@@ -288,6 +307,15 @@ async function generate() {
                             img.style.maxWidth = '100%';
                             img.style.marginBottom = '10px';
                             img.style.borderRadius = '4px';
+                            img.style.cursor = 'pointer';
+                            img.onclick = () => {
+                                const modal = document.getElementById('image_modal');
+                                const modalImg = document.getElementById('modal_img');
+                                const captionText = document.getElementById('modal_caption');
+                                modal.style.display = "block";
+                                modalImg.src = img.src;
+                                captionText.innerHTML = prompt_text;
+                            };
                             image_container.appendChild(img);
                             
                             // Save to history
@@ -367,4 +395,18 @@ function load_config() {
 window.addEventListener('load', () => {
     load_config();
     initDB().then(loadHistory);
+
+    // Modal close logic
+    const modal = document.getElementById('image_modal');
+    const closeBtn = document.getElementById('close_modal');
+    
+    closeBtn.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
 });
