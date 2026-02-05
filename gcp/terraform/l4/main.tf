@@ -29,6 +29,7 @@ resource "google_compute_instance" "vm_instance" {
 
   metadata = {
     install-nvidia-driver = "True"
+    serial-port-logging-enable = "true"
     auth_username         = var.auth_username
     auth_password         = var.auth_password
   }

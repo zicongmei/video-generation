@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Fix for Bullseye backports 404 - DO THIS FIRST
+sudo sed -i 's/.*bullseye-backports.*/# &/' /etc/apt/sources.list
+if [ -d /etc/apt/sources.list.d ]; then
+    sudo sed -i 's/.*bullseye-backports.*/# &/' /etc/apt/sources.list.d/*.list 2>/dev/null || true
+fi
+
 # Combined functions from comfy_common_lib.sh
 
 setup_serial_logging() {
@@ -42,7 +48,7 @@ setup_ssl_cert() {
 install_comfyui_core() {
     local python_bin=$1
     echo "Installing ComfyUI core..."
-    cd ~
+    cd /root
     if [ ! -d "ComfyUI" ]; then
         git clone https://github.com/comfyanonymous/ComfyUI.git
     fi
@@ -53,9 +59,9 @@ install_comfyui_core() {
     fi
     source venv/bin/activate
     pip install --upgrade pip
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-    pip install -r requirements.txt
-    pip install "huggingface_hub[cli,hf_transfer]" gguf
+    pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf
 }
 
 get_node() {
@@ -68,14 +74,14 @@ get_node() {
          unzip "${name}.zip" && mv "${name}-main" "$name" && rm "${name}.zip")
     fi
     if [ -d "$name" ] && [ -f "$name/requirements.txt" ]; then
-        pip install -r "$name/requirements.txt"
+        pip install --no-cache-dir -r "$name/requirements.txt"
     fi
 }
 
 install_standard_nodes() {
     echo "Installing standard custom nodes..."
     export GIT_TERMINAL_PROMPT=0
-    cd ~/ComfyUI/custom_nodes
+    cd /root/ComfyUI/custom_nodes
     get_node "city96" "ComfyUI-GGUF"
     get_node "kijai" "ComfyUI-WanVideoWrapper"
     get_node "Kosinkadink" "ComfyUI-VideoHelperSuite"
