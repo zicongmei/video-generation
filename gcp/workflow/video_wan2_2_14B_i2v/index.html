@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wan 2.2 I2V Generator</title>
+    <link rel="stylesheet" href="resource/style.css">
+</head>
+<body>
+    <div class="main-wrapper">
+        <div id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h2>History</h2>
+                <button id="clear_history">Clear All</button>
+            </div>
+            <div id="history_list" class="history-list"></div>
+        </div>
+        
+        <div class="container">
+            <h1>Wan 2.2 I2V Generator</h1>
+            <div class="server-config">
+                <input type="text" id="server_ip" placeholder="VM_IP:443" value="">
+                <div class="auth-group" style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
+                    <input type="text" id="username" placeholder="Username" style="width: 35%;">
+                    <div style="width: 55%; display: flex; align-items: center;">
+                        <input type="password" id="password" placeholder="Password" style="width: 80%;">
+                        <button id="toggle_password" style="margin-top: 0; padding: 5px; font-size: 0.7rem; width: 20%; margin-left: 5px;">Show</button>
+                    </div>
+                </div>
+                <p class="hint">Example: 34.73.142.115:443</p>
+            </div>
+
+            <div class="input-group">
+                <label style="display: block; text-align: left; font-weight: bold; margin-bottom: 5px;">Source Image:</label>
+                <input type="file" id="image_input" accept="image/*" style="width: 100%; padding: 10px; border: 1px dashed #ccc; border-radius: 4px; margin-bottom: 10px;">
+                <img id="image_preview" class="image-preview">
+
+                <label style="display: block; text-align: left; font-weight: bold; margin-top: 15px; margin-bottom: 5px;">Positive Prompt:</label>
+                <textarea id="prompt" placeholder="Enter your prompt here...">The white dragon warrior stands still, eyes full of determination and strength.</textarea>
+                
+                <label style="display: block; text-align: left; font-weight: bold; margin-top: 15px; margin-bottom: 5px;">Negative Prompt:</label>
+                <textarea id="negative_prompt" placeholder="Enter negative prompt here..." style="height: 80px;">色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走</textarea>
+                
+                <div class="settings-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; text-align: left;">
+                    <div class="setting">
+                        <label>Width:</label>
+                        <input type="number" id="width" value="640" step="8">
+                    </div>
+                    <div class="setting">
+                        <label>Height:</label>
+                        <input type="number" id="height" value="640" step="8">
+                    </div>
+                    <div class="setting">
+                        <label>Length (Frames):</label>
+                        <input type="number" id="length" value="81" step="1">
+                    </div>
+                    <div class="setting">
+                        <label>FPS:</label>
+                        <input type="number" id="fps" value="16" step="1">
+                    </div>
+                    <div class="setting" style="grid-column: span 2;">
+                        <label>Seed (-1 for random):</label>
+                        <input type="number" id="seed" value="-1">
+                    </div>
+                </div>
+
+                <button id="generate" style="margin-top: 20px;">Generate Video</button>
+            </div>
+
+            <div id="status"></div>
+
+            <div class="debug-section" style="margin-top: 20px; text-align: left;">
+                <button id="toggle_debug" style="background: #6c757d; font-size: 0.8rem; padding: 5px 10px;">Show Debug Info</button>
+                <div id="debug_info" style="display: none; margin-top: 10px; background: #212529; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto;">
+                    <div><strong>Time taken:</strong> <span id="debug_time">N/A</span></div>
+                    <div style="margin-top: 10px;"><strong>API Request:</strong></div>
+                    <pre id="debug_request" style="white-space: pre-wrap; word-break: break-all; margin: 0;"></pre>
+                    <div style="margin-top: 10px;"><strong>API Response (History):</strong></div>
+                    <pre id="debug_response" style="white-space: pre-wrap; word-break: break-all; margin: 0;"></pre>
+                </div>
+            </div>
+
+            <div class="output-group" id="video-container">
+                <!-- Videos will be appended here -->
+            </div>
+        </div>
+    </div>
+    <script src="resource/script.js"></script>
+</body>
+</html>
