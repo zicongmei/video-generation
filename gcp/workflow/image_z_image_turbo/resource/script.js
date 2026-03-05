@@ -180,6 +180,17 @@ async function get_history(prompt_id) {
     return await response.json();
 }
 
+document.getElementById('toggle_sidebar').onclick = function() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.classList.contains('collapsed')) {
+        sidebar.classList.remove('collapsed');
+        this.innerText = '◀';
+    } else {
+        sidebar.classList.add('collapsed');
+        this.innerText = '▶';
+    }
+};
+
 document.getElementById('toggle_debug').onclick = function() {
     const debug_info = document.getElementById('debug_info');
     if (debug_info.style.display === 'none') {

@@ -10,6 +10,7 @@ body {
 .main-wrapper {
     display: flex;
     height: 100vh;
+    position: relative;
 }
 
 .sidebar {
@@ -20,6 +21,36 @@ body {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 0;
+    border-right: none;
+}
+
+.toggle-sidebar {
+    position: absolute;
+    left: 0;
+    top: 20px;
+    z-index: 1001;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    width: 24px;
+    height: 40px;
+    cursor: pointer;
+    transition: left 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar:not(.collapsed) + .toggle-sidebar {
+    left: 300px;
 }
 
 .sidebar-header {
