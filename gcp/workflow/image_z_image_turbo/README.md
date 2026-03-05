@@ -45,16 +45,16 @@ You can use the following commands to download the models directly into your Com
 MODELS_DIR="/root/ComfyUI/models"
 
 # Download Text Encoder
-wget -P "$MODELS_DIR/text_encoders/" https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors
+wget -c -P "$MODELS_DIR/text_encoders/" https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors
 
 # Download LoRA
-wget -P "$MODELS_DIR/loras/" https://huggingface.co/tarn59/pixel_art_style_lora_z_image_turbo/resolve/main/pixel_art_style_z_image_turbo.safetensors
+wget -c -P "$MODELS_DIR/loras/" https://huggingface.co/tarn59/pixel_art_style_lora_z_image_turbo/resolve/main/pixel_art_style_z_image_turbo.safetensors
 
 # Download Diffusion Model
-wget -P "$MODELS_DIR/diffusion_models/" https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors
+wget -c -P "$MODELS_DIR/diffusion_models/" https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors
 
 # Download VAE
-wget -P "$MODELS_DIR/vae/" https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors
+wget -c -P "$MODELS_DIR/vae/" https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors
 ```
 
 ## Prerequisites

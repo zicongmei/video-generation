@@ -112,21 +112,12 @@ function addToSidebar(item) {
     img.onclick = () => {
         document.getElementById('prompt').value = item.prompt;
         
-        // Show in modal
-        const modal = document.getElementById('image_modal');
-        const modalImg = document.getElementById('modal_img');
-        const captionText = document.getElementById('modal_caption');
-        
-        modal.style.display = "block";
-        modalImg.src = img.src;
-        captionText.innerHTML = item.prompt;
-
-        // Also show it in main view
+        // Also show it in main view (the "front")
         const image_container = document.getElementById('image-container');
         image_container.innerHTML = '';
         const mainImg = document.createElement('img');
         mainImg.src = img.src;
-        mainImg.className = 'generated-image';
+        mainImg.className = 'generated-image full-width'; // Show it large
         mainImg.style.cursor = 'pointer';
         mainImg.onclick = () => {
             const modal = document.getElementById('image_modal');
@@ -303,8 +294,7 @@ async function generate() {
                             
                             const img = document.createElement('img');
                             img.src = img_url;
-                            img.className = 'generated-image';
-                            img.style.maxWidth = '100%';
+                            img.className = 'generated-image full-width';
                             img.style.marginBottom = '10px';
                             img.style.borderRadius = '4px';
                             img.style.cursor = 'pointer';
