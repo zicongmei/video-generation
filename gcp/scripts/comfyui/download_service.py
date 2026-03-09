@@ -1,9 +1,9 @@
 import os
 import subprocess
 import json
+import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
@@ -26,6 +26,40 @@ WORKFLOWS = {
         "script": "/root/models_download/video_wan2_2_14B_i2v.sh",
     }
 }
+
+active_tasks = {}
+active_processes = {}
+
+async def download_workflow_models(workflow_id, models_data):
+    procs = []
+    try:
+        for m in models_data:
+            os.makedirs(os.path.dirname(m['path']), exist_ok=True)
+            # Use wget -c to continue from where it left off
+            p = await asyncio.create_subprocess_exec(
+                "wget", "-c", "-O", m['path'], m['url'],
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL
+            )
+            procs.append(p)
+        
+        active_processes[workflow_id] = procs
+        
+        # Wait for all parallel downloads to complete
+        await asyncio.gather(*(p.wait() for p in procs))
+    except asyncio.CancelledError:
+        # If task is cancelled, explicitly kill running wget processes
+        for p in procs:
+            try:
+                p.kill()
+            except Exception:
+                pass
+        raise
+    finally:
+        if workflow_id in active_processes:
+            del active_processes[workflow_id]
+        if workflow_id in active_tasks:
+            del active_tasks[workflow_id]
 
 def get_model_status(workflow_id):
     script_path = WORKFLOWS[workflow_id]["script"]
@@ -51,25 +85,13 @@ def get_model_status(workflow_id):
         print(f"Error checking models for {workflow_id}: {e}")
         return []
 
-def is_downloading(workflow_id):
-    script_path = WORKFLOWS[workflow_id]["script"]
-    try:
-        # pgrep -f matches the full command line. 
-        # We look for the script path specifically.
-        subprocess.check_call(["pgrep", "-f", script_path])
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
 @app.get("/download/api/status")
 async def get_status():
     status = {}
     for wf_id in WORKFLOWS:
         models = get_model_status(wf_id)
         exists = len(models) > 0 and all(m["exists"] for m in models)
-        downloading = False
-        if not exists:
-            downloading = is_downloading(wf_id)
+        downloading = wf_id in active_tasks
             
         status[wf_id] = {
             "name": WORKFLOWS[wf_id]["name"],
@@ -84,16 +106,32 @@ async def trigger_download(workflow_id: str):
     if workflow_id not in WORKFLOWS:
         return JSONResponse(content={"error": "Invalid workflow ID"}, status_code=400)
     
-    if is_downloading(workflow_id):
-        return JSONResponse(content={"message": "Download already in progress"})
-
-    script_path = WORKFLOWS[workflow_id]["script"]
-    if not os.path.exists(script_path):
-        return JSONResponse(content={"error": f"Script {script_path} not found"}, status_code=500)
+    # If currently downloading, cancel the old task so we can restart
+    if workflow_id in active_tasks:
+        active_tasks[workflow_id].cancel()
+        await asyncio.sleep(0.2) # Allow propagation of cancellation to kill processes
+        
+    models = get_model_status(workflow_id)
+    if not models:
+        return JSONResponse(content={"error": f"No models found for {workflow_id}"}, status_code=500)
     
-    # Run in background to avoid blocking
-    subprocess.Popen(["/bin/bash", script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Start new download task
+    task = asyncio.create_task(download_workflow_models(workflow_id, models))
+    active_tasks[workflow_id] = task
+    
     return JSONResponse(content={"message": f"Started download for {WORKFLOWS[workflow_id]['name']}"})
+
+@app.post("/download/api/remove")
+async def remove_model(request: Request):
+    data = await request.json()
+    path = data.get("path")
+    if path and path.startswith("/root/ComfyUI/models/") and os.path.exists(path):
+        try:
+            os.remove(path)
+            return JSONResponse(content={"message": f"Removed {os.path.basename(path)}"})
+        except Exception as e:
+            return JSONResponse(content={"error": str(e)}, status_code=500)
+    return JSONResponse(content={"error": "Invalid or missing path"}, status_code=400)
 
 @app.get("/download", response_class=HTMLResponse)
 async def get_index():
@@ -113,9 +151,10 @@ async def get_index():
             .downloading { color: orange; }
             button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
             button:disabled { background: #ccc; cursor: not-allowed; }
+            .delete-btn { background: #dc3545; padding: 4px 8px; font-size: 0.8em; margin-left: 10px; }
             .refresh { margin-bottom: 20px; }
             .model-list { margin: 10px 0 0 0; padding-left: 20px; list-style-type: none; font-size: 0.9em; }
-            .model-list li { margin-bottom: 5px; word-break: break-all; }
+            .model-list li { margin-bottom: 8px; word-break: break-all; display: flex; align-items: center; }
         </style>
     </head>
     <body>
@@ -149,15 +188,16 @@ async def get_index():
                     } else if (wf.downloading) {
                         statusText = '⏳ Downloading...';
                         statusClass = 'downloading';
-                        btnText = 'Downloading...';
-                        btnDisabled = true;
+                        btnText = 'Restart Download';
+                        btnDisabled = false; // Never greyed out while downloading! Allows restarting.
                     }
 
                     let modelsHtml = '<ul class="model-list">';
                     if (wf.models && wf.models.length > 0) {
                         wf.models.forEach(m => {
                             const icon = m.exists ? '<span class="exists">✔</span>' : '<span class="missing">✖</span>';
-                            modelsHtml += `<li>${icon} ${m.filename}</li>`;
+                            const delBtn = m.exists ? `<button class="delete-btn" onclick="removeModel('${m.path}')">Delete</button>` : '';
+                            modelsHtml += `<li>${icon}&nbsp;${m.filename} ${delBtn}</li>`;
                         });
                     } else {
                         modelsHtml += '<li>No models found or script missing.</li>';
@@ -170,7 +210,7 @@ async def get_index():
                                 <h3>${wf.name}</h3>
                                 <p class="status ${statusClass}">${statusText}</p>
                             </div>
-                            <button onclick="triggerDownload('${id}')" ${btnDisabled ? 'disabled' : ''}>
+                            <button onclick="triggerDownload('${id}', this)" ${btnDisabled ? 'disabled' : ''}>
                                 ${btnText}
                             </button>
                         </div>
@@ -180,18 +220,28 @@ async def get_index():
                 }
             }
 
-            async function triggerDownload(id) {
-                const btn = event.target;
+            async function triggerDownload(id, btn) {
                 btn.disabled = true;
                 btn.innerText = 'Starting...';
                 const response = await fetch(`/download/api/trigger/${id}`, { method: 'POST' });
                 const result = await response.json();
                 console.log(result.message || result.error);
-                setTimeout(updateStatus, 1000);
+                setTimeout(updateStatus, 500);
+            }
+            
+            async function removeModel(path) {
+                if(!confirm("Are you sure you want to delete this model?")) return;
+                const response = await fetch('/download/api/remove', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: path })
+                });
+                const result = await response.json();
+                console.log(result.message || result.error);
+                setTimeout(updateStatus, 500);
             }
 
             updateStatus();
-            // Poll every 5 seconds for more responsive UI during download
             setInterval(updateStatus, 5000);
         </script>
     </body>
