@@ -1,5 +1,6 @@
 import os
 import subprocess
+import json
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,14 +34,16 @@ def get_model_status(workflow_id):
     
     models_status = []
     try:
-        # Get list of models from the script itself
+        # Get list of models as JSON from the script itself
         result = subprocess.check_output(["/bin/bash", script_path, "--list"], text=True)
-        model_paths = result.strip().split("\n")
-        for model_path in model_paths:
+        model_data = json.loads(result.strip())
+        for item in model_data:
+            model_path = item.get("path")
             if model_path:
                 models_status.append({
                     "path": model_path,
                     "filename": os.path.basename(model_path),
+                    "url": item.get("url", ""),
                     "exists": os.path.exists(model_path)
                 })
         return models_status
