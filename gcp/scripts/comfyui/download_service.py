@@ -26,22 +26,27 @@ WORKFLOWS = {
     }
 }
 
-def check_models(workflow_id):
+def get_model_status(workflow_id):
     script_path = WORKFLOWS[workflow_id]["script"]
     if not os.path.exists(script_path):
-        return False
+        return []
     
+    models_status = []
     try:
         # Get list of models from the script itself
         result = subprocess.check_output(["/bin/bash", script_path, "--list"], text=True)
         model_paths = result.strip().split("\n")
         for model_path in model_paths:
-            if model_path and not os.path.exists(model_path):
-                return False
-        return True
+            if model_path:
+                models_status.append({
+                    "path": model_path,
+                    "filename": os.path.basename(model_path),
+                    "exists": os.path.exists(model_path)
+                })
+        return models_status
     except Exception as e:
         print(f"Error checking models for {workflow_id}: {e}")
-        return False
+        return []
 
 def is_downloading(workflow_id):
     script_path = WORKFLOWS[workflow_id]["script"]
@@ -57,7 +62,8 @@ def is_downloading(workflow_id):
 async def get_status():
     status = {}
     for wf_id in WORKFLOWS:
-        exists = check_models(wf_id)
+        models = get_model_status(wf_id)
+        exists = len(models) > 0 and all(m["exists"] for m in models)
         downloading = False
         if not exists:
             downloading = is_downloading(wf_id)
@@ -65,7 +71,8 @@ async def get_status():
         status[wf_id] = {
             "name": WORKFLOWS[wf_id]["name"],
             "exists": exists,
-            "downloading": downloading
+            "downloading": downloading,
+            "models": models
         }
     return JSONResponse(content=status)
 
@@ -93,15 +100,19 @@ async def get_index():
     <head>
         <title>Model Downloader</title>
         <style>
-            body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; }
-            .card { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-            .status { font-weight: bold; }
+            body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+            .card { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
+            .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+            .card-header h3 { margin: 0; }
+            .status { font-weight: bold; margin: 0; }
             .exists { color: green; }
             .missing { color: red; }
             .downloading { color: orange; }
             button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
             button:disabled { background: #ccc; cursor: not-allowed; }
             .refresh { margin-bottom: 20px; }
+            .model-list { margin: 10px 0 0 0; padding-left: 20px; list-style-type: none; font-size: 0.9em; }
+            .model-list li { margin-bottom: 5px; word-break: break-all; }
         </style>
     </head>
     <body>
@@ -139,14 +150,28 @@ async def get_index():
                         btnDisabled = true;
                     }
 
+                    let modelsHtml = '<ul class="model-list">';
+                    if (wf.models && wf.models.length > 0) {
+                        wf.models.forEach(m => {
+                            const icon = m.exists ? '<span class="exists">✔</span>' : '<span class="missing">✖</span>';
+                            modelsHtml += `<li>${icon} ${m.filename}</li>`;
+                        });
+                    } else {
+                        modelsHtml += '<li>No models found or script missing.</li>';
+                    }
+                    modelsHtml += '</ul>';
+
                     div.innerHTML = `
-                        <div>
-                            <h3>${wf.name}</h3>
-                            <p class="status ${statusClass}">${statusText}</p>
+                        <div class="card-header">
+                            <div>
+                                <h3>${wf.name}</h3>
+                                <p class="status ${statusClass}">${statusText}</p>
+                            </div>
+                            <button onclick="triggerDownload('${id}')" ${btnDisabled ? 'disabled' : ''}>
+                                ${btnText}
+                            </button>
                         </div>
-                        <button onclick="triggerDownload('${id}')" ${btnDisabled ? 'disabled' : ''}>
-                            ${btnText}
-                        </button>
+                        ${modelsHtml}
                     `;
                     container.appendChild(div);
                 }
