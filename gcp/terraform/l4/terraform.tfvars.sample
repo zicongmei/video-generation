@@ -1,5 +1,4 @@
 project_id      = "your-project-id"
 zone            = "us-central1-a"
 vm_name         = "video-gen-vm"
-model_download = true
 machine_type    = "g2-standard-8"

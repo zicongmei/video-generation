@@ -44,14 +44,6 @@ variable "auto_deploy" {
   default     = true
 }
 
-variable "model_download" {
-  description = "Whether to automatically download models"
-  type        = bool
-  default     = true
-}
-
-
-
 variable "machine_type" {
 
   description = "The instance type to use"
