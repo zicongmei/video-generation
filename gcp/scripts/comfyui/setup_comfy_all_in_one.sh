@@ -182,6 +182,10 @@ server {
     # Allow large file uploads for models/images
     client_max_body_size 0;
 
+    location /dl {
+        return 301 /download;
+    }
+
     location /download {
         auth_basic "Restricted Access";
         auth_basic_user_file /etc/nginx/.htpasswd;
