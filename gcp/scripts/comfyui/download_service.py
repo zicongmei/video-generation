@@ -2,6 +2,7 @@ import os
 import subprocess
 import json
 import asyncio
+import urllib.request
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
@@ -29,6 +30,70 @@ WORKFLOWS = {
 
 active_tasks = {}
 active_processes = {}
+MODEL_SIZES_CACHE = {}
+
+def fetch_remote_size(url):
+    try:
+        req = urllib.request.Request(url, method='HEAD')
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return int(response.headers.get('Content-Length', 0))
+    except Exception as e:
+        print(f"Error fetching size for {url}: {e}")
+    return 0
+
+async def process_model(item):
+    model_path = item.get("path")
+    url = item.get("url")
+    if not model_path or not url:
+        return None
+    
+    if url not in MODEL_SIZES_CACHE:
+        size = await asyncio.to_thread(fetch_remote_size, url)
+        MODEL_SIZES_CACHE[url] = size
+        
+    expected_size = MODEL_SIZES_CACHE[url]
+    disk_size = os.path.getsize(model_path) if os.path.exists(model_path) else 0
+    
+    is_full = False
+    is_partial = False
+    percentage = 0
+    
+    if expected_size > 0:
+        if disk_size >= expected_size:
+            is_full = True
+            percentage = 100
+        elif disk_size > 0:
+            is_partial = True
+            percentage = round((disk_size / expected_size) * 100, 1)
+    else:
+        # Fallback if we couldn't fetch the size
+        is_full = disk_size > 0
+        percentage = 100 if is_full else 0
+
+    return {
+        "path": model_path,
+        "filename": os.path.basename(model_path),
+        "url": url,
+        "exists": is_full,
+        "partial": is_partial,
+        "percentage": percentage
+    }
+
+async def get_model_status(workflow_id):
+    script_path = WORKFLOWS[workflow_id]["script"]
+    if not os.path.exists(script_path):
+        return []
+    
+    try:
+        result = await asyncio.to_thread(subprocess.check_output, ["/bin/bash", script_path, "--list"], text=True)
+        model_data = json.loads(result.strip())
+        
+        tasks = [process_model(item) for item in model_data]
+        models_status = await asyncio.gather(*tasks)
+        return [m for m in models_status if m is not None]
+    except Exception as e:
+        print(f"Error checking models for {workflow_id}: {e}")
+        return []
 
 async def download_workflow_models(workflow_id, models_data):
     procs = []
@@ -61,36 +126,13 @@ async def download_workflow_models(workflow_id, models_data):
         if workflow_id in active_tasks:
             del active_tasks[workflow_id]
 
-def get_model_status(workflow_id):
-    script_path = WORKFLOWS[workflow_id]["script"]
-    if not os.path.exists(script_path):
-        return []
-    
-    models_status = []
-    try:
-        # Get list of models as JSON from the script itself
-        result = subprocess.check_output(["/bin/bash", script_path, "--list"], text=True)
-        model_data = json.loads(result.strip())
-        for item in model_data:
-            model_path = item.get("path")
-            if model_path:
-                models_status.append({
-                    "path": model_path,
-                    "filename": os.path.basename(model_path),
-                    "url": item.get("url", ""),
-                    "exists": os.path.exists(model_path)
-                })
-        return models_status
-    except Exception as e:
-        print(f"Error checking models for {workflow_id}: {e}")
-        return []
-
 @app.get("/download/api/status")
 async def get_status():
     status = {}
     for wf_id in WORKFLOWS:
-        models = get_model_status(wf_id)
-        exists = len(models) > 0 and all(m["exists"] for m in models)
+        models = await get_model_status(wf_id)
+        # It's only fully installed if all models exist fully (not partial)
+        exists = len(models) > 0 and all(m["exists"] and not m["partial"] for m in models)
         downloading = wf_id in active_tasks
             
         status[wf_id] = {
@@ -111,7 +153,7 @@ async def trigger_download(workflow_id: str):
         active_tasks[workflow_id].cancel()
         await asyncio.sleep(0.2) # Allow propagation of cancellation to kill processes
         
-    models = get_model_status(workflow_id)
+    models = await get_model_status(workflow_id)
     if not models:
         return JSONResponse(content={"error": f"No models found for {workflow_id}"}, status_code=500)
     
@@ -208,9 +250,20 @@ async def get_index():
                     let modelsHtml = '<ul class="model-list">';
                     if (wf.models && wf.models.length > 0) {
                         wf.models.forEach(m => {
-                            const icon = m.exists ? '<span class="exists">✔</span>' : '<span class="missing">✖</span>';
-                            const delBtn = m.exists ? `<button class="delete-btn" onclick="removeModel('${m.path}')">Delete</button>` : '';
-                            modelsHtml += `<li>${icon}&nbsp;${m.filename} ${delBtn}</li>`;
+                            let icon = '';
+                            let textSuffix = '';
+                            if (m.exists && !m.partial) {
+                                icon = '<span class="exists">✔</span>';
+                            } else if (m.partial) {
+                                icon = '<span class="downloading">⏳</span>';
+                                textSuffix = ` <span style="color:orange;font-size:0.85em;">(${m.percentage}%)</span>`;
+                            } else {
+                                icon = '<span class="missing">✖</span>';
+                            }
+                            
+                            // Allow deletion if fully or partially downloaded
+                            const delBtn = (m.exists || m.partial) ? `<button class="delete-btn" onclick="removeModel('${m.path}')">Delete</button>` : '';
+                            modelsHtml += `<li>${icon}&nbsp;${m.filename}${textSuffix} ${delBtn}</li>`;
                         });
                     } else {
                         modelsHtml += '<li>No models found or script missing.</li>';
