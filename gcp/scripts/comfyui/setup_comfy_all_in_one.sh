@@ -61,7 +61,31 @@ install_comfyui_core() {
     pip install --upgrade pip
     pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
     pip install --no-cache-dir -r requirements.txt
-    pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf
+    pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf fastapi uvicorn
+}
+
+setup_download_service() {
+    echo "Creating download service..."
+    sudo tee /etc/systemd/system/comfyui-download.service <<EOF
+[Unit]
+Description=ComfyUI Download Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root
+ExecStart=/root/ComfyUI/venv/bin/python /root/download_service.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable comfyui-download
+    sudo systemctl restart comfyui-download
 }
 
 get_node() {
@@ -158,6 +182,16 @@ server {
     # Allow large file uploads for models/images
     client_max_body_size 0;
 
+    location /download {
+        auth_basic "Restricted Access";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location / {
         # CORS Headers
         add_header 'Access-Control-Allow-Origin' '$http_origin' always;
@@ -207,6 +241,7 @@ EOF
 
 install_standard_nodes
 setup_systemd
+setup_download_service
 
 echo "--------------------------------------------------------"
 echo "Setup complete! Secured with Nginx Auth."

@@ -34,8 +34,9 @@ resource "google_compute_instance" "vm_instance" {
     auth_password         = var.auth_password
   }
 
-  metadata_startup_script = var.auto_deploy ? format("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+  metadata_startup_script = var.auto_deploy ? format("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
     file("${path.module}/../../scripts/comfyui/setup_comfy_all_in_one.sh"),
+    "cat <<'EOF' > /root/download_service.py\n${file("${path.module}/../../scripts/comfyui/download_service.py")}\nEOF",
     "mkdir -p /root/models_download",
     "cat <<'EOF' > /root/models_download/z_image_turbo.sh\n${file("${path.module}/../../workflow/image_z_image_turbo/download_models.sh")}\nEOF",
     "cat <<'EOF' > /root/models_download/ltx2_t2v.sh\n${file("${path.module}/../../workflow/ltx2_t2v/download_models.sh")}\nEOF",
