@@ -34,7 +34,7 @@ resource "google_compute_instance" "vm_instance" {
     auth_password         = var.auth_password
   }
 
-  metadata_startup_script = var.auto_deploy ? format("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+  metadata_startup_script = var.auto_deploy ? format("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
     "cat <<'EOF_PYTHON' > /root/download_service.py\n${file("${path.module}/../../scripts/comfyui/download_service.py")}\nEOF_PYTHON",
     "mkdir -p /root/models_download",
     "cat <<'EOF_Z_IMAGE' > /root/models_download/z_image_turbo.sh\n${file("${path.module}/../../workflow/image_z_image_turbo/download_models.sh")}\nEOF_Z_IMAGE",
