@@ -121,6 +121,13 @@ async def trigger_download(workflow_id: str):
     
     return JSONResponse(content={"message": f"Started download for {WORKFLOWS[workflow_id]['name']}"})
 
+@app.post("/download/api/stop/{workflow_id}")
+async def stop_download(workflow_id: str):
+    if workflow_id in active_tasks:
+        active_tasks[workflow_id].cancel()
+        return JSONResponse(content={"message": f"Stopped download for {WORKFLOWS[workflow_id]['name']}"})
+    return JSONResponse(content={"message": "No active download to stop"})
+
 @app.post("/download/api/remove")
 async def remove_model(request: Request):
     data = await request.json()
@@ -149,9 +156,13 @@ async def get_index():
             .exists { color: green; }
             .missing { color: red; }
             .downloading { color: orange; }
-            button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-            button:disabled { background: #ccc; cursor: not-allowed; }
-            .delete-btn { background: #dc3545; padding: 4px 8px; font-size: 0.8em; margin-left: 10px; }
+            button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; border: 1px solid #007bff; transition: background 0.2s; }
+            button:hover { background: #0056b3; }
+            button:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
+            .stop-btn { background: #ffc107; color: black; border-color: #ffc107; margin-left: 10px; }
+            .stop-btn:hover { background: #e0a800; }
+            .delete-btn { background: #dc3545; padding: 4px 8px; font-size: 0.8em; margin-left: 10px; border-color: #dc3545; }
+            .delete-btn:hover { background: #c82333; }
             .refresh { margin-bottom: 20px; }
             .model-list { margin: 10px 0 0 0; padding-left: 20px; list-style-type: none; font-size: 0.9em; }
             .model-list li { margin-bottom: 8px; word-break: break-all; display: flex; align-items: center; }
@@ -179,6 +190,7 @@ async def get_index():
                     let statusClass = 'missing';
                     let btnText = 'Download Models';
                     let btnDisabled = false;
+                    let showStop = false;
 
                     if (wf.exists) {
                         statusText = '● Installed';
@@ -189,7 +201,7 @@ async def get_index():
                         statusText = '⏳ Downloading...';
                         statusClass = 'downloading';
                         btnText = 'Restart Download';
-                        btnDisabled = false; // Never greyed out while downloading! Allows restarting.
+                        showStop = true;
                     }
 
                     let modelsHtml = '<ul class="model-list">';
@@ -204,15 +216,20 @@ async def get_index():
                     }
                     modelsHtml += '</ul>';
 
+                    const stopBtnHtml = showStop ? `<button class="stop-btn" onclick="stopDownload('${id}')">Stop Download</button>` : '';
+
                     div.innerHTML = `
                         <div class="card-header">
                             <div>
                                 <h3>${wf.name}</h3>
                                 <p class="status ${statusClass}">${statusText}</p>
                             </div>
-                            <button onclick="triggerDownload('${id}', this)" ${btnDisabled ? 'disabled' : ''}>
-                                ${btnText}
-                            </button>
+                            <div>
+                                <button onclick="triggerDownload('${id}', this)" ${btnDisabled ? 'disabled' : ''}>
+                                    ${btnText}
+                                </button>
+                                ${stopBtnHtml}
+                            </div>
                         </div>
                         ${modelsHtml}
                     `;
@@ -224,6 +241,13 @@ async def get_index():
                 btn.disabled = true;
                 btn.innerText = 'Starting...';
                 const response = await fetch(`/download/api/trigger/${id}`, { method: 'POST' });
+                const result = await response.json();
+                console.log(result.message || result.error);
+                setTimeout(updateStatus, 500);
+            }
+
+            async function stopDownload(id) {
+                const response = await fetch(`/download/api/stop/${id}`, { method: 'POST' });
                 const result = await response.json();
                 console.log(result.message || result.error);
                 setTimeout(updateStatus, 500);
