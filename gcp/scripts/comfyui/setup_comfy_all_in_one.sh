@@ -100,9 +100,11 @@ After=network.target nginx.service
 Type=simple
 User=root
 WorkingDirectory=/root/ComfyUI
-ExecStart=/root/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --normalvram
+ExecStart=/root/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --normalvram --verbose ERROR
 Restart=always
 RestartSec=10
+StandardOutput=null
+StandardError=null
 
 [Install]
 WantedBy=multi-user.target
