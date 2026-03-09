@@ -200,7 +200,8 @@ async def get_index():
                     } else if (wf.downloading) {
                         statusText = '⏳ Downloading...';
                         statusClass = 'downloading';
-                        btnText = 'Restart Download';
+                        btnText = 'Downloading...';
+                        btnDisabled = true;
                         showStop = true;
                     }
 
