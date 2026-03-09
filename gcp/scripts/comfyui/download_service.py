@@ -43,13 +43,29 @@ def check_models(workflow_id):
         print(f"Error checking models for {workflow_id}: {e}")
         return False
 
+def is_downloading(workflow_id):
+    script_path = WORKFLOWS[workflow_id]["script"]
+    try:
+        # pgrep -f matches the full command line. 
+        # We look for the script path specifically.
+        subprocess.check_call(["pgrep", "-f", script_path])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
 @app.get("/download/api/status")
 async def get_status():
     status = {}
     for wf_id in WORKFLOWS:
+        exists = check_models(wf_id)
+        downloading = False
+        if not exists:
+            downloading = is_downloading(wf_id)
+            
         status[wf_id] = {
             "name": WORKFLOWS[wf_id]["name"],
-            "exists": check_models(wf_id)
+            "exists": exists,
+            "downloading": downloading
         }
     return JSONResponse(content=status)
 
@@ -58,6 +74,9 @@ async def trigger_download(workflow_id: str):
     if workflow_id not in WORKFLOWS:
         return JSONResponse(content={"error": "Invalid workflow ID"}, status_code=400)
     
+    if is_downloading(workflow_id):
+        return JSONResponse(content={"message": "Download already in progress"})
+
     script_path = WORKFLOWS[workflow_id]["script"]
     if not os.path.exists(script_path):
         return JSONResponse(content={"error": f"Script {script_path} not found"}, status_code=500)
@@ -79,6 +98,7 @@ async def get_index():
             .status { font-weight: bold; }
             .exists { color: green; }
             .missing { color: red; }
+            .downloading { color: orange; }
             button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
             button:disabled { background: #ccc; cursor: not-allowed; }
             .refresh { margin-bottom: 20px; }
@@ -101,15 +121,31 @@ async def get_index():
                     const wf = status[id];
                     const div = document.createElement('div');
                     div.className = 'card';
+                    
+                    let statusText = '○ Missing';
+                    let statusClass = 'missing';
+                    let btnText = 'Download Models';
+                    let btnDisabled = false;
+
+                    if (wf.exists) {
+                        statusText = '● Installed';
+                        statusClass = 'exists';
+                        btnText = 'Installed';
+                        btnDisabled = true;
+                    } else if (wf.downloading) {
+                        statusText = '⏳ Downloading...';
+                        statusClass = 'downloading';
+                        btnText = 'Downloading...';
+                        btnDisabled = true;
+                    }
+
                     div.innerHTML = `
                         <div>
                             <h3>${wf.name}</h3>
-                            <p class="status ${wf.exists ? 'exists' : 'missing'}">
-                                ${wf.exists ? '● Installed' : '○ Missing'}
-                            </p>
+                            <p class="status ${statusClass}">${statusText}</p>
                         </div>
-                        <button onclick="triggerDownload('${id}')" ${wf.exists ? 'disabled' : ''}>
-                            ${wf.exists ? 'Installed' : 'Download Models'}
+                        <button onclick="triggerDownload('${id}')" ${btnDisabled ? 'disabled' : ''}>
+                            ${btnText}
                         </button>
                     `;
                     container.appendChild(div);
@@ -122,13 +158,13 @@ async def get_index():
                 btn.innerText = 'Starting...';
                 const response = await fetch(`/download/api/trigger/${id}`, { method: 'POST' });
                 const result = await response.json();
-                alert(result.message || result.error);
-                setTimeout(updateStatus, 2000);
+                console.log(result.message || result.error);
+                setTimeout(updateStatus, 1000);
             }
 
             updateStatus();
-            // Poll every 30 seconds
-            setInterval(updateStatus, 30000);
+            // Poll every 5 seconds for more responsive UI during download
+            setInterval(updateStatus, 5000);
         </script>
     </body>
     </html>
