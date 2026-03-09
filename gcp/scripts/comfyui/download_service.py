@@ -76,7 +76,8 @@ async def process_model(item):
         "url": url,
         "exists": is_full,
         "partial": is_partial,
-        "percentage": percentage
+        "percentage": percentage,
+        "size_gb": round(expected_size / (1024 ** 3), 2) if expected_size > 0 else 0
     }
 
 async def get_model_status(workflow_id):
@@ -263,7 +264,8 @@ async def get_index():
                             
                             // Allow deletion if fully or partially downloaded
                             const delBtn = (m.exists || m.partial) ? `<button class="delete-btn" onclick="removeModel('${m.path}')">Delete</button>` : '';
-                            modelsHtml += `<li>${icon}&nbsp;${m.filename}${textSuffix} ${delBtn}</li>`;
+                            const sizeText = m.size_gb > 0 ? ` <span style="color:#666;font-size:0.85em;">(${m.size_gb} GB)</span>` : '';
+                            modelsHtml += `<li>${icon}&nbsp;${m.filename}${sizeText}${textSuffix} ${delBtn}</li>`;
                         });
                     } else {
                         modelsHtml += '<li>No models found or script missing.</li>';

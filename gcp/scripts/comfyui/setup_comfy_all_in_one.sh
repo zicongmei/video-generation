@@ -61,10 +61,16 @@ install_comfyui_core() {
     pip install --upgrade pip
     pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
     pip install --no-cache-dir -r requirements.txt
-    pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf fastapi uvicorn
+    pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf
 }
 
 setup_download_service() {
+    echo "Creating dedicated venv for download service..."
+    local python_bin=$(find_python310)
+    sudo $python_bin -m venv /root/model_downloader_venv
+    sudo /root/model_downloader_venv/bin/pip install --upgrade pip
+    sudo /root/model_downloader_venv/bin/pip install --no-cache-dir fastapi uvicorn
+
     echo "Creating download service..."
     sudo tee /etc/systemd/system/comfyui-download.service <<EOF
 [Unit]
@@ -75,7 +81,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root
-ExecStart=/root/ComfyUI/venv/bin/python /root/download_service.py
+ExecStart=/root/model_downloader_venv/bin/python /root/download_service.py
 Restart=always
 RestartSec=10
 
