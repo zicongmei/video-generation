@@ -40,6 +40,7 @@ resource "google_compute_instance" "vm_instance" {
     "cat <<'EOF_Z_IMAGE' > /root/models_download/z_image_turbo.sh\n${file("${path.module}/../../workflow/image_z_image_turbo/download_models.sh")}\nEOF_Z_IMAGE",
     "cat <<'EOF_LTX2' > /root/models_download/ltx2_t2v.sh\n${file("${path.module}/../../workflow/ltx2_t2v/download_models.sh")}\nEOF_LTX2",
     "cat <<'EOF_LTX23_I2V' > /root/models_download/lxt_2_3_i2v.sh\n${file("${path.module}/../../workflow/lxt_2_3_i2v/download_models.sh")}\nEOF_LTX23_I2V",
+    "cat <<'EOF_LXTV_I2V' > /root/models_download/lxtv_i2v.sh\n${file("${path.module}/../../workflow/lxtv_i2v/download_models.sh")}\nEOF_LXTV_I2V",
     "cat <<'EOF_WAN_T2V' > /root/models_download/video_wan2_2_14B_t2v.sh\n${file("${path.module}/../../workflow/video_wan2_2_14B_t2v/download_models.sh")}\nEOF_WAN_T2V",
     "cat <<'EOF_WAN_I2V' > /root/models_download/video_wan2_2_14B_i2v.sh\n${file("${path.module}/../../workflow/video_wan2_2_14B_i2v/download_models.sh")}\nEOF_WAN_I2V",
     "chmod +x /root/models_download/*.sh",

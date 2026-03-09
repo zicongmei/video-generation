@@ -22,6 +22,10 @@ WORKFLOWS = {
         "name": "LTX-2.3 I2V",
         "script": "/root/models_download/lxt_2_3_i2v.sh",
     },
+    "lxtv_i2v": {
+        "name": "LTX-Video I2V",
+        "script": "/root/models_download/lxtv_i2v.sh",
+    },
     "video_wan2_2_14B_t2v": {
         "name": "Wan 2.2 T2V (14B)",
         "script": "/root/models_download/video_wan2_2_14B_t2v.sh",
