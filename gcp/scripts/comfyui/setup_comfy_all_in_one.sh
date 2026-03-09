@@ -178,12 +178,27 @@ sudo htpasswd -bc /etc/nginx/.htpasswd "$AUTH_USER" "$AUTH_PASS"
 echo "Cleaning up conflicting Nginx configurations..."
 sudo rm -f /etc/nginx/sites-enabled/*
 
+# Define Rate Limiting Zone
+echo "Defining Nginx rate limiting zone..."
+sudo tee /etc/nginx/conf.d/ratelimit.conf <<'EOF'
+limit_req_zone $binary_remote_addr zone=comfy_limit:10m rate=1000r/s;
+EOF
+
 sudo tee /etc/nginx/sites-available/comfyui <<'EOF'
+server {
+    listen 80;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
 server {
     listen 443 ssl;
     server_name _;
     ssl_certificate /etc/nginx/ssl/nginx.crt;
     ssl_certificate_key /etc/nginx/ssl/nginx.key;
+
+    # Rate Limiting
+    limit_req zone=comfy_limit burst=200 nodelay;
 
     # Allow large file uploads for models/images
     client_max_body_size 0;
