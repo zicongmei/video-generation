@@ -72,7 +72,7 @@ setup_download_service() {
     sudo /root/model_downloader_venv/bin/pip install --no-cache-dir fastapi uvicorn
 
     echo "Creating download service..."
-    sudo tee /etc/systemd/system/comfyui-download.service <<EOF
+    sudo tee /etc/systemd/system/comfyui-download.service <<'EOF'
 [Unit]
 Description=ComfyUI Download Service
 After=network.target
