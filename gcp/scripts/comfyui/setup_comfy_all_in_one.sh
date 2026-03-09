@@ -228,6 +228,8 @@ sudo ln -sf /etc/nginx/sites-available/comfyui /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo systemctl restart nginx
 
+setup_download_service
+
 # 6. ComfyUI Install
 install_comfyui_core "$PYTHON_310"
 
@@ -241,7 +243,6 @@ EOF
 
 install_standard_nodes
 setup_systemd
-setup_download_service
 
 echo "--------------------------------------------------------"
 echo "Setup complete! Secured with Nginx Auth."
