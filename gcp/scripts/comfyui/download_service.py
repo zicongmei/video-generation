@@ -37,6 +37,10 @@ WORKFLOWS = {
     "qwen_image_2512_t2i": {
         "name": "Qwen-Image-2512 T2I",
         "script": "/root/models_download/qwen_image_2512_t2i.sh",
+    },
+    "qwen_3_text": {
+        "name": "Qwen-3 Text",
+        "script": "/root/models_download/qwen_3_text.sh",
     }
 }
 
