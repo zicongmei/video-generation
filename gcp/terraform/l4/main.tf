@@ -45,6 +45,7 @@ resource "google_compute_instance" "vm_instance" {
     "cat <<'EOF_WAN_I2V' > /root/models_download/video_wan2_2_14B_i2v.sh\n${file("${path.module}/../../workflow/video_wan2_2_14B_i2v/download_models.sh")}\nEOF_WAN_I2V",
     "cat <<'EOF_QWEN_I' > /root/models_download/qwen_image_2512_t2i.sh\n${file("${path.module}/../../workflow/qwen_image_2512_t2i/download_models.sh")}\nEOF_QWEN_I",
     "cat <<'EOF_QWEN_3' > /root/models_download/qwen_3_text.sh\n${file("${path.module}/../../workflow/qwen_3_text/download_models.sh")}\nEOF_QWEN_3",
+    "cat <<'EOF_FLUX2_DEV' > /root/models_download/flux2_dev.sh\n${file("${path.module}/../../workflow/Flux_2_Dev/download_models.sh")}\nEOF_FLUX2_DEV",
     "chmod +x /root/models_download/*.sh",
     file("${path.module}/../../scripts/comfyui/setup_comfy_all_in_one.sh"),
     "echo 'Startup script finished'"

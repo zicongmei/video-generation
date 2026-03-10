@@ -41,6 +41,10 @@ WORKFLOWS = {
     "qwen_3_text": {
         "name": "Qwen-3 Text",
         "script": "/root/models_download/qwen_3_text.sh",
+    },
+    "flux2_dev": {
+        "name": "Flux 2 Dev",
+        "script": "/root/models_download/flux2_dev.sh",
     }
 }
 
