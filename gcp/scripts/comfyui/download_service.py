@@ -33,6 +33,10 @@ WORKFLOWS = {
     "video_wan2_2_14B_i2v": {
         "name": "Wan 2.2 I2V (14B)",
         "script": "/root/models_download/video_wan2_2_14B_i2v.sh",
+    },
+    "qwen_image_2512_t2i": {
+        "name": "Qwen-Image-2512 T2I",
+        "script": "/root/models_download/qwen_image_2512_t2i.sh",
     }
 }
 
