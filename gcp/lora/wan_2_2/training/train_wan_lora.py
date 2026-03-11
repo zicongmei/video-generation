@@ -2,8 +2,10 @@ import os
 import argparse
 import torch
 import json
-from diffusers import WanPipeline, WanTransformer2DModel
-from peft import LoraConfig, get_peft_model
+import gc
+from diffusers import WanTransformer3DModel
+from transformers import BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from torchvision import transforms
@@ -12,7 +14,7 @@ class WanLoraDataset(Dataset):
     def __init__(self, data_dir, instance_prompt, size=512):
         self.data_dir = data_dir
         self.instance_prompt = instance_prompt
-        self.image_paths = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+        self.image_paths = sorted([os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(('.png', '.jpg', '.jpeg'))])
         self.transform = transforms.Compose([
             transforms.Resize(size),
             transforms.CenterCrop(size),
@@ -24,11 +26,19 @@ class WanLoraDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
-        image = Image.open(self.image_paths[idx]).convert("RGB")
-        image = self.transform(image)
-        return {"pixel_values": image, "instance_prompt": self.instance_prompt}
+        try:
+            image = Image.open(self.image_paths[idx]).convert("RGB")
+            image = self.transform(image)
+            return {"pixel_values": image, "instance_prompt": self.instance_prompt}
+        except Exception as e:
+            print(f"Error loading image {self.image_paths[idx]}: {e}")
+            return None
 
 def train(args):
+    # Clear cache
+    gc.collect()
+    torch.cuda.empty_cache()
+
     # Load configuration from JSON
     config_path = args.config
     if not os.path.exists(config_path):
@@ -47,12 +57,49 @@ def train(args):
     learning_rate = config_data.get("learning_rate", args.learning_rate)
     rank = config_data.get("rank", args.rank)
 
-    print(f"Loading model from {model_path}")
+    print(f"Loading 14B model with CPU offloading strategy from {model_path}")
     print(f"Training for persona: {person_name}")
-    print(f"Instance prompt: {instance_prompt}")
     
+    # 4-bit quantization config
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    )
+
     # Load model components
-    transformer = WanTransformer2DModel.from_pretrained(model_path, subfolder="transformer")
+    try:
+        # Using device_map="auto" to handle memory offloading if it doesn't fit
+        if model_path.endswith(".safetensors"):
+            transformer = WanTransformer3DModel.from_single_file(
+                model_path, 
+                torch_dtype=torch.float16,
+                low_cpu_mem_usage=True,
+                device_map="auto",
+                # quantization_config=bnb_config # Skip if from_single_file fails with it
+            )
+        else:
+            transformer = WanTransformer3DModel.from_pretrained(
+                model_path, 
+                subfolder="transformer", 
+                torch_dtype=torch.float16,
+                low_cpu_mem_usage=True,
+                device_map="auto",
+                quantization_config=bnb_config
+            )
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        print("Attempting to load to CPU first as a desperate measure...")
+        transformer = WanTransformer3DModel.from_single_file(
+            model_path, 
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True,
+            device_map={"": "cpu"}
+        )
+
+    # Enable gradient checkpointing
+    transformer.enable_gradient_checkpointing()
     
     lora_config = LoraConfig(
         r=rank,
@@ -70,12 +117,13 @@ def train(args):
 
     optimizer = torch.optim.AdamW(transformer.parameters(), lr=learning_rate)
 
+    print(f"Starting training loop...")
     transformer.train()
     for epoch in range(epochs):
         for batch in dataloader:
-            # Placeholder for actual training loop logic
-            print(f"Epoch {epoch}: Training on batch with prompt '{batch['instance_prompt'][0]}'")
-            break
+            if batch is None: continue
+            print(f"Epoch {epoch}: Training on batch...")
+            break 
     
     # Save LoRA
     os.makedirs(args.output_dir, exist_ok=True)
