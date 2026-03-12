@@ -22,11 +22,11 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 
 # Default prompt (can be overridden)
-PROMPT="${1:-"{person_name} is smiling"}"
+PROMPT="${1:-"{person_name} is smiling, cinematic"}"
 
 echo "Starting Wan 2.2 video generation for persona using LoRA from $LORA_PATH..."
 START_TIME=$(date +%s)
-echo "Generation started at: $(date) (Optimized, No CPU Offload)" >> "$TIMING_LOG"
+echo "Generation started at: $(date) (Optimized, 4-step Light LoRA)" >> "$TIMING_LOG"
 
 # Ensure output directory exists
 mkdir -p "$OUTPUT_DIR"
@@ -38,7 +38,7 @@ sudo "$PYTHON_BIN" "$GEN_DIR/generate_wan_video.py" \
     --prompt "$PROMPT" \
     --output_dir "$OUTPUT_DIR" \
     --num_frames 81 \
-    --steps 30
+    --steps 4
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))

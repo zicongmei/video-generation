@@ -120,18 +120,31 @@ def generate(args):
         print("Keeping all components on GPU...")
         pipe.to(device)
 
-    # 6. Load LoRA
+    # 6. Load LoRA(s)
     lora_dir = args.lora_path
     weight_name = "adapter_model.safetensors"
     if os.path.isfile(lora_dir):
         weight_name = os.path.basename(lora_dir)
         lora_dir = os.path.dirname(lora_dir)
 
-    print(f"Loading LoRA weights from {lora_dir}, weight_name={weight_name}...")
-    pipe.load_lora_weights(lora_dir, weight_name=weight_name)
+    print(f"Loading trained LoRA weights from {lora_dir}, weight_name={weight_name}...")
+    pipe.load_lora_weights(lora_dir, weight_name=weight_name, adapter_name="trained")
     
+    # Load Light LoRA if provided
+    light_lora_path = config_data.get("light_lora_path")
+    if light_lora_path and os.path.exists(light_lora_path):
+        print(f"Loading Light LoRA weights from {light_lora_path}...")
+        light_dir = os.path.dirname(light_lora_path)
+        light_name = os.path.basename(light_lora_path)
+        pipe.load_lora_weights(light_dir, weight_name=light_name, adapter_name="light")
+        
+        # Combine both adapters
+        pipe.set_adapters(["trained", "light"], adapter_weights=[1.0, 1.0])
+    else:
+        pipe.set_adapters(["trained"], adapter_weights=[1.0])
+
     # 7. Generate
-    print("Starting generation...")
+    print(f"Starting generation with {args.steps} steps...")
     with torch.no_grad():
         output = pipe(
             prompt=prompt,
@@ -160,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_frames", type=int, default=81)
     parser.add_argument("--width", type=int, default=832)
     parser.add_argument("--height", type=int, default=480)
-    parser.add_argument("--steps", type=int, default=30)
+    parser.add_argument("--steps", type=int, default=4)
     parser.add_argument("--guidance_scale", type=float, default=5.0)
     parser.add_argument("--fps", type=int, default=16)
     args = parser.parse_args()
