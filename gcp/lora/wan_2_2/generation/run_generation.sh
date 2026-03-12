@@ -10,7 +10,7 @@ OUTPUT_DIR="$GEN_DIR/output"
 PYTHON_BIN="/root/ComfyUI/venv/bin/python"
 
 # Default prompt (can be overridden)
-PROMPT="${1:-A cinematic video of {person_name} walking in a futuristic city, sunset.}"
+PROMPT="${1:-A person {person_name} smiling.}"
 
 echo "Starting Wan 2.2 video generation for persona using LoRA from $LORA_PATH..."
 

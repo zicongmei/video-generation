@@ -64,6 +64,18 @@ install_comfyui_core() {
     pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf
 }
 
+setup_ramdisk() {
+    echo "Setting up ramdisk for ComfyUI output..."
+    mkdir -p /root/ComfyUI/output
+    # Mount a 2GB ramdisk for outputs
+    if ! mountpoint -q /root/ComfyUI/output; then
+        sudo mount -t tmpfs -o size=2G tmpfs /root/ComfyUI/output
+        echo "Ramdisk mounted at /root/ComfyUI/output"
+    else
+        echo "Ramdisk already mounted at /root/ComfyUI/output"
+    fi
+}
+
 setup_download_service() {
     echo "Creating dedicated venv for download service..."
     local python_bin=$(find_python310)
