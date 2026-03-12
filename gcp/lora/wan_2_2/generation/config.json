@@ -1,0 +1,14 @@
+{
+    "person_name": "LYFLR",
+    "model_path": "/root/ComfyUI/models/diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+    "vae_path": "/root/ComfyUI/models/vae/wan_2_1_vae.safetensors",
+    "text_encoder_path": "/root/ComfyUI/models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    "num_frames": 81,
+    "steps": 30,
+    "width": 832,
+    "height": 480,
+    "guidance_scale": 5.0,
+    "use_cpu_offload": false,
+    "load_transformer_in_4bit": true,
+    "load_text_encoder_in_4bit": true
+}

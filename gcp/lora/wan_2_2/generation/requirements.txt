@@ -1,0 +1,19 @@
+# Core ML dependencies
+torch>=2.4.0
+torchvision
+torchaudio
+
+# Diffusers and Transformers
+git+https://github.com/huggingface/diffusers.git
+peft>=0.12.0
+transformers>=4.45.0
+accelerate>=0.34.0
+
+# Optimization and memory saving
+bitsandbytes>=0.43.0
+sentencepiece
+
+# Video processing
+numpy
+huggingface_hub[cli,hf_transfer]
+opencv-python

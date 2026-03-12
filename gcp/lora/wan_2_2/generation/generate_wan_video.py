@@ -20,8 +20,11 @@ def generate(args):
     model_path = config_data.get("model_path")
     vae_path = config_data.get("vae_path")
     text_encoder_path = config_data.get("text_encoder_path")
+    use_cpu_offload = config_data.get("use_cpu_offload", False)
+    load_transformer_in_4bit = config_data.get("load_transformer_in_4bit", True)
+    load_text_encoder_in_4bit = config_data.get("load_text_encoder_in_4bit", True)
     
-    # Instance prompt
+    # Instance prompt - ensure correct replacement
     prompt = args.prompt.replace("{person_name}", person_name)
     print(f"Generating video for: {person_name}")
     print(f"Prompt: {prompt}")
@@ -29,24 +32,22 @@ def generate(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.bfloat16
 
-    print("Loading components with optimized memory strategy...")
+    print(f"Loading components with optimized settings (CPU Offload: {use_cpu_offload})...")
     
-    # 1. Load Transformer - prioritize fitting in VRAM
+    # 1. Load Transformer
     print(f"Loading transformer from {model_path}...")
-    # L4 has 24GB. 14B model in bfloat16 is ~28GB. 4-bit is ~8-9GB.
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch_dtype,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-    )
+    
+    bnb_config = None
+    if load_transformer_in_4bit:
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch_dtype,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
     
     try:
-        # Try loading from local file if possible, or hub if needed
         if model_path.endswith(".safetensors"):
-             # For L4, we must use quantization to fit
-             # but from_single_file + quantization is often broken in diffusers
-             # We try from_pretrained with hub ID but local components might be tricky
              transformer = WanTransformer3DModel.from_pretrained(
                 "Wan-AI/Wan2.1-T2V-14B-Diffusers", 
                 subfolder="transformer", 
@@ -80,8 +81,23 @@ def generate(args):
 
     # 3. Load Text Encoder
     print(f"Loading Text Encoder...")
+    t5_bnb_config = None
+    if load_text_encoder_in_4bit:
+        t5_bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch_dtype,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+
     tokenizer = T5Tokenizer.from_pretrained("Wan-AI/Wan2.1-T2V-14B-Diffusers", subfolder="tokenizer")
-    text_encoder = T5EncoderModel.from_pretrained("Wan-AI/Wan2.1-T2V-14B-Diffusers", subfolder="text_encoder", torch_dtype=torch_dtype)
+    text_encoder = T5EncoderModel.from_pretrained(
+        "Wan-AI/Wan2.1-T2V-14B-Diffusers", 
+        subfolder="text_encoder", 
+        torch_dtype=torch_dtype,
+        quantization_config=t5_bnb_config,
+        device_map="auto"
+    )
 
     # 4. Load Scheduler
     print("Loading scheduler...")
@@ -97,9 +113,12 @@ def generate(args):
         scheduler=scheduler
     )
     
-    # Use enable_model_cpu_offload instead of sequential (which had meta tensor issues)
-    print("Enabling model CPU offload...")
-    pipe.enable_model_cpu_offload()
+    if use_cpu_offload:
+        print("Enabling model CPU offload...")
+        pipe.enable_model_cpu_offload()
+    else:
+        print("Keeping all components on GPU...")
+        pipe.to(device)
 
     # 6. Load LoRA
     lora_dir = args.lora_path
@@ -133,10 +152,9 @@ def generate(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="gcp/lora/wan_2_2/training/config.json")
+    parser.add_argument("--config", type=str, default="gcp/lora/wan_2_2/generation/config.json")
     parser.add_argument("--lora_path", type=str, default="gcp/lora/wan_2_2/training/output")
-    parser.add_argument("--model_path", type=str)
-    parser.add_argument("--prompt", type=str, default="A cinematic video of {person_name} walking in a futuristic city, sunset.")
+    parser.add_argument("--prompt", type=str, default="{person_name} is smiling")
     parser.add_argument("--negative_prompt", type=str, default="low quality, blurry, distorted")
     parser.add_argument("--output_dir", type=str, default="gcp/lora/wan_2_2/generation/output")
     parser.add_argument("--num_frames", type=int, default=81)
