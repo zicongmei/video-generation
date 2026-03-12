@@ -212,6 +212,15 @@ async def restart_comfyui():
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+@app.post("/download/api/restart_vm")
+async def restart_vm():
+    try:
+        # Schedule a reboot in 1 second to allow the response to be sent
+        subprocess.Popen(["sudo", "shutdown", "-r", "+1", "VM restart requested via Model Downloader"])
+        return JSONResponse(content={"message": "VM restart scheduled in 1 minute. Connection will be lost."})
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 @app.get("/download", response_class=HTMLResponse)
 async def get_index():
     return """
@@ -234,8 +243,10 @@ async def get_index():
             button:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
             .stop-btn { background: #ffc107; color: black; border-color: #ffc107; margin-left: 10px; }
             .stop-btn:hover { background: #e0a800; }
-            .restart-btn { background: #28a745; border-color: #28a745; }
+            .restart-btn { background: #28a745; border-color: #28a745; margin-left: 10px; }
             .restart-btn:hover { background: #218838; }
+            .reboot-btn { background: #dc3545; border-color: #dc3545; margin-left: 10px; }
+            .reboot-btn:hover { background: #c82333; }
             .delete-btn { background: #dc3545; padding: 4px 8px; font-size: 0.8em; margin-left: 10px; border-color: #dc3545; }
             .delete-btn:hover { background: #c82333; }
             .refresh { margin-right: 10px; }
@@ -253,12 +264,25 @@ async def get_index():
             </div>
             <div>
                 <button class="restart-btn" onclick="restartComfyUI(this)">Restart ComfyUI</button>
+                <button class="reboot-btn" onclick="restartVM(this)">Restart VM</button>
             </div>
         </div>
 
         <div id="workflows"></div>
 
         <script>
+            async function restartVM(btn) {
+                if(!confirm("Are you sure you want to RESTART the entire VM? This will take about a minute.")) return;
+                btn.disabled = true;
+                btn.innerText = 'Restarting...';
+                try {
+                    const response = await fetch('/download/api/restart_vm', { method: 'POST' });
+                    const result = await response.json();
+                    alert(result.message || result.error);
+                } catch (e) {
+                    alert("Error: " + e);
+                }
+            }
             async function restartComfyUI(btn) {
                 if(!confirm("Are you sure you want to restart ComfyUI?")) return;
                 btn.disabled = true;
