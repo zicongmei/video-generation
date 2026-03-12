@@ -220,3 +220,4 @@ tls.key
 
 gcp/lora/wan_2_2/training/config.json
 gcp/lora/wan_2_2/training/data
+gcp/lora/wan_2_2/generation/output
