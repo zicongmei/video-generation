@@ -269,6 +269,7 @@ setup_download_service
 
 # 6. ComfyUI Install
 install_comfyui_core "$PYTHON_310"
+setup_ramdisk
 
 echo "Pre-enabling Dev mode Options..."
 sudo mkdir -p /root/ComfyUI/user/default
