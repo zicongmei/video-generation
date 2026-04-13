@@ -18,6 +18,10 @@ WORKFLOWS = {
         "name": "Z-Image-Turbo",
         "script": "/root/models_download/z_image_turbo.sh",
     },
+    "longcat": {
+        "name": "Longcat",
+        "script": "/root/models_download/longcat.sh",
+    },
     "ltx2_t2v": {
         "name": "LTX-2 T2V",
         "script": "/root/models_download/ltx2_t2v.sh",
