@@ -10,6 +10,10 @@ app = FastAPI()
 
 # Workflow to representative file mapping
 WORKFLOWS = {
+    "z_image": {
+        "name": "Z-Image",
+        "script": "/root/models_download/z_image.sh",
+    },
     "z_image_turbo": {
         "name": "Z-Image-Turbo",
         "script": "/root/models_download/z_image_turbo.sh",
