@@ -28,7 +28,7 @@ resource "google_tpu_v2_vm" "tpu_vm" {
 }
 
 resource "google_compute_firewall" "allow_https" {
-  name    = "allow-https-tpu"
+  name    = "${var.vm_name}-allow-https-tpu"
   network = "default"
 
   allow {

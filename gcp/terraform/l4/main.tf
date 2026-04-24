@@ -62,7 +62,7 @@ resource "google_compute_instance" "vm_instance" {
 }
 
 resource "google_compute_firewall" "allow_https" {
-  name    = "allow-https"
+  name    = "${var.vm_name}-allow-https-l4"
   network = "default"
 
   allow {
