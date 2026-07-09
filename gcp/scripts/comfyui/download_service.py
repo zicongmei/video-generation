@@ -53,6 +53,10 @@ WORKFLOWS = {
     "flux2_dev": {
         "name": "Flux 2 Dev",
         "script": "/root/models_download/flux2_dev.sh",
+    },
+    "krea_2": {
+        "name": "Krea-2",
+        "script": "/root/models_download/krea_2.sh",
     }
 }
 
