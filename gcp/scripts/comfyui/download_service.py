@@ -79,6 +79,11 @@ WORKFLOWS = {
         "name": "Ideogram-4",
         "script": "/root/models_download/image_ideogram_4.sh",
         "category": "Image Models"
+    },
+    "hidream_o1_image": {
+        "name": "HiDream-O1-Image",
+        "script": "/root/models_download/hidream_o1_image.sh",
+        "category": "Image Models"
     }
 }
 
