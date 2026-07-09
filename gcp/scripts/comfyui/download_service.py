@@ -74,6 +74,11 @@ WORKFLOWS = {
         "name": "Z-Image-Turbo (Int8/Subgraph)",
         "script": "/root/models_download/image_subgraph.sh",
         "category": "Image Models"
+    },
+    "image_ideogram_4": {
+        "name": "Ideogram-4",
+        "script": "/root/models_download/image_ideogram_4.sh",
+        "category": "Image Models"
     }
 }
 

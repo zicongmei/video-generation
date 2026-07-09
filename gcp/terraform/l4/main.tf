@@ -34,7 +34,7 @@ resource "google_compute_instance" "vm_instance" {
     auth_password         = var.auth_password
   }
 
-  metadata_startup_script = var.auto_deploy ? format("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+  metadata_startup_script = var.auto_deploy ? format("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
     "cat <<'EOF_PYTHON' > /root/download_service.py\n${file("${path.module}/../../scripts/comfyui/download_service.py")}\nEOF_PYTHON",
     "mkdir -p /root/models_download",
     "cat <<'EOF_Z_IMAGE' > /root/models_download/z_image_turbo.sh\n${file("${path.module}/../../workflow/image_z_image_turbo/download_models.sh")}\nEOF_Z_IMAGE",
@@ -50,6 +50,7 @@ resource "google_compute_instance" "vm_instance" {
     "cat <<'EOF_FLUX2_DEV' > /root/models_download/flux2_dev.sh\n${file("${path.module}/../../workflow/Flux_2_Dev/download_models.sh")}\nEOF_FLUX2_DEV",
     "cat <<'EOF_KREA2' > /root/models_download/krea_2.sh\n${file("${path.module}/../../workflow/krea_2/download_models.sh")}\nEOF_KREA2",
     "cat <<'EOF_SUBGRAPH' > /root/models_download/image_subgraph.sh\n${file("${path.module}/../../workflow/image_subgraph/download_models.sh")}\nEOF_SUBGRAPH",
+    "cat <<'EOF_IDEOGRAM4' > /root/models_download/image_ideogram_4.sh\n${file("${path.module}/../../workflow/image_ideogram_4/download_models.sh")}\nEOF_IDEOGRAM4",
     "chmod +x /root/models_download/*.sh",
     file("${path.module}/../../scripts/comfyui/setup_comfy_all_in_one.sh"),
     "echo 'Startup script finished'"
