@@ -13,50 +13,62 @@ WORKFLOWS = {
     "z_image": {
         "name": "Z-Image",
         "script": "/root/models_download/z_image.sh",
+        "category": "Image Models"
     },
     "z_image_turbo": {
         "name": "Z-Image-Turbo",
         "script": "/root/models_download/z_image_turbo.sh",
+        "category": "Image Models"
     },
     "longcat": {
         "name": "Longcat",
         "script": "/root/models_download/longcat.sh",
+        "category": "Image Models"
     },
     "ltx2_t2v": {
         "name": "LTX-2 T2V",
         "script": "/root/models_download/ltx2_t2v.sh",
+        "category": "Video Models"
     },
     "lxt_2_3_i2v": {
         "name": "LTX-2.3 I2V",
         "script": "/root/models_download/lxt_2_3_i2v.sh",
+        "category": "Video Models"
     },
     "lxtv_i2v": {
         "name": "LTX-Video I2V",
         "script": "/root/models_download/lxtv_i2v.sh",
+        "category": "Video Models"
     },
     "video_wan2_2_14B_t2v": {
         "name": "Wan 2.2 T2V (14B)",
         "script": "/root/models_download/video_wan2_2_14B_t2v.sh",
+        "category": "Video Models"
     },
     "video_wan2_2_14B_i2v": {
         "name": "Wan 2.2 I2V (14B)",
         "script": "/root/models_download/video_wan2_2_14B_i2v.sh",
+        "category": "Video Models"
     },
     "qwen_image_2512_t2i": {
         "name": "Qwen-Image-2512 T2I",
         "script": "/root/models_download/qwen_image_2512_t2i.sh",
+        "category": "Image Models"
     },
     "qwen_3_text": {
         "name": "Qwen-3 Text",
         "script": "/root/models_download/qwen_3_text.sh",
+        "category": "Image Models"
     },
     "flux2_dev": {
         "name": "Flux 2 Dev",
         "script": "/root/models_download/flux2_dev.sh",
+        "category": "Image Models"
     },
     "krea_2": {
         "name": "Krea-2",
         "script": "/root/models_download/krea_2.sh",
+        "category": "Image Models"
     }
 }
 
@@ -170,6 +182,7 @@ async def get_status():
             
         status[wf_id] = {
             "name": WORKFLOWS[wf_id]["name"],
+            "category": WORKFLOWS[wf_id]["category"],
             "exists": exists,
             "downloading": downloading,
             "models": models
@@ -243,6 +256,7 @@ async def get_index():
         <style>
             body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; line-height: 1.6; }
             .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+            .category-header { background: #f8f9fa; padding: 10px 15px; margin: 30px 0 15px 0; border-radius: 6px; border-left: 5px solid #007bff; font-size: 1.4em; font-weight: bold; color: #333; }
             .card { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
             .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
             .card-header h3 { margin: 0; }
@@ -316,73 +330,94 @@ async def get_index():
                 const container = document.getElementById('workflows');
                 container.innerHTML = '';
                 
+                // Group by category
+                const groups = {};
                 for (const id in status) {
                     const wf = status[id];
-                    const div = document.createElement('div');
-                    div.className = 'card';
-                    
-                    let statusText = '○ Missing';
-                    let statusClass = 'missing';
-                    let btnText = 'Download Models';
-                    let btnDisabled = false;
-                    let showStop = false;
-
-                    if (wf.exists) {
-                        statusText = '● Installed';
-                        statusClass = 'exists';
-                        btnText = 'Installed';
-                        btnDisabled = true;
-                    } else if (wf.downloading) {
-                        statusText = '⏳ Downloading...';
-                        statusClass = 'downloading';
-                        btnText = 'Downloading...';
-                        btnDisabled = true;
-                        showStop = true;
-                    }
-
-                    let modelsHtml = '<ul class="model-list">';
-                    if (wf.models && wf.models.length > 0) {
-                        wf.models.forEach(m => {
-                            let icon = '';
-                            let textSuffix = '';
-                            if (m.exists && !m.partial) {
-                                icon = '<span class="exists">✔</span>';
-                            } else if (m.partial) {
-                                icon = '<span class="downloading">⏳</span>';
-                                textSuffix = ` <span style="color:orange;font-size:0.85em;">(${m.percentage}%)</span>`;
-                            } else {
-                                icon = '<span class="missing">✖</span>';
-                            }
-                            
-                            // Allow deletion if fully or partially downloaded
-                            const delBtn = (m.exists || m.partial) ? `<button class="delete-btn" onclick="removeModel('${m.path}')">Delete</button>` : '';
-                            const sizeText = m.size_gb > 0 ? ` <span style="color:#666;font-size:0.85em;">(${m.size_gb} GB)</span>` : '';
-                            modelsHtml += `<li>${icon}&nbsp;${m.filename}${sizeText}${textSuffix} ${delBtn}</li>`;
-                        });
-                    } else {
-                        modelsHtml += '<li>No models found or script missing.</li>';
-                    }
-                    modelsHtml += '</ul>';
-
-                    const stopBtnHtml = showStop ? `<button class="stop-btn" onclick="stopDownload('${id}')">Stop Download</button>` : '';
-
-                    div.innerHTML = `
-                        <div class="card-header">
-                            <div>
-                                <h3>${wf.name}</h3>
-                                <p class="status ${statusClass}">${statusText}</p>
-                            </div>
-                            <div>
-                                <button onclick="triggerDownload('${id}', this)" ${btnDisabled ? 'disabled' : ''}>
-                                    ${btnText}
-                                </button>
-                                ${stopBtnHtml}
-                            </div>
-                        </div>
-                        ${modelsHtml}
-                    `;
-                    container.appendChild(div);
+                    const cat = wf.category || "Other Models";
+                    if (!groups[cat]) groups[cat] = [];
+                    groups[cat].push({ id, ...wf });
                 }
+
+                // Desired order
+                const categories = ["Image Models", "Video Models"];
+                
+                categories.forEach(cat => {
+                    if (!groups[cat]) return;
+                    
+                    const groupHeader = document.createElement('div');
+                    groupHeader.className = 'category-header';
+                    groupHeader.innerText = cat;
+                    container.appendChild(groupHeader);
+                    
+                    groups[cat].forEach(wf => {
+                        const id = wf.id;
+                        const div = document.createElement('div');
+                        div.className = 'card';
+                        
+                        let statusText = '○ Missing';
+                        let statusClass = 'missing';
+                        let btnText = 'Download Models';
+                        let btnDisabled = false;
+                        let showStop = false;
+
+                        if (wf.exists) {
+                            statusText = '● Installed';
+                            statusClass = 'exists';
+                            btnText = 'Installed';
+                            btnDisabled = true;
+                        } else if (wf.downloading) {
+                            statusText = '⏳ Downloading...';
+                            statusClass = 'downloading';
+                            btnText = 'Downloading...';
+                            btnDisabled = true;
+                            showStop = true;
+                        }
+
+                        let modelsHtml = '<ul class="model-list">';
+                        if (wf.models && wf.models.length > 0) {
+                            wf.models.forEach(m => {
+                                let icon = '';
+                                let textSuffix = '';
+                                if (m.exists && !m.partial) {
+                                    icon = '<span class="exists">✔</span>';
+                                } else if (m.partial) {
+                                    icon = '<span class="downloading">⏳</span>';
+                                    textSuffix = ` <span style="color:orange;font-size:0.85em;">(${m.percentage}%)</span>`;
+                                } else {
+                                    icon = '<span class="missing">✖</span>';
+                                }
+                                
+                                // Allow deletion if fully or partially downloaded
+                                const delBtn = (m.exists || m.partial) ? `<button class="delete-btn" onclick="removeModel('${m.path}')">Delete</button>` : '';
+                                const sizeText = m.size_gb > 0 ? ` <span style="color:#666;font-size:0.85em;">(${m.size_gb} GB)</span>` : '';
+                                modelsHtml += `<li>${icon}&nbsp;${m.filename}${sizeText}${textSuffix} ${delBtn}</li>`;
+                            });
+                        } else {
+                            modelsHtml += '<li>No models found or script missing.</li>';
+                        }
+                        modelsHtml += '</ul>';
+
+                        const stopBtnHtml = showStop ? `<button class="stop-btn" onclick="stopDownload('${id}')">Stop Download</button>` : '';
+
+                        div.innerHTML = `
+                            <div class="card-header">
+                                <div>
+                                    <h3>${wf.name}</h3>
+                                    <p class="status ${statusClass}">${statusText}</p>
+                                </div>
+                                <div>
+                                    <button onclick="triggerDownload('${id}', this)" ${btnDisabled ? 'disabled' : ''}>
+                                        ${btnText}
+                                    </button>
+                                    ${stopBtnHtml}
+                                </div>
+                            </div>
+                            ${modelsHtml}
+                        `;
+                        container.appendChild(div);
+                    });
+                });
             }
 
             async function triggerDownload(id, btn) {
