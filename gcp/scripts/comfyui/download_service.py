@@ -69,6 +69,11 @@ WORKFLOWS = {
         "name": "Krea-2",
         "script": "/root/models_download/krea_2.sh",
         "category": "Image Models"
+    },
+    "image_subgraph": {
+        "name": "Z-Image-Turbo (Int8/Subgraph)",
+        "script": "/root/models_download/image_subgraph.sh",
+        "category": "Image Models"
     }
 }
 
