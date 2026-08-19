@@ -62,6 +62,27 @@ install_comfyui_core() {
     pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
     pip install --no-cache-dir -r requirements.txt
     pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf
+
+    # Apply workaround for PyTorch 2.6 list type validation issue in comfy_kitchen custom ops
+    local na_path=$(find venv/lib -name "na.py" | grep "comfy_kitchen/backends/eager/na.py" | head -n 1)
+    if [ -n "$na_path" ] && [ -f "$na_path" ]; then
+        echo "Applying comfy_kitchen PyTorch 2.6 compatibility patch..."
+        venv/bin/python -c "
+import typing
+path = '$na_path'
+with open(path, 'r') as f:
+    content = f.read()
+
+if 'import typing' not in content:
+    content = 'import typing\n' + content
+
+content = content.replace('kernel_size: list[int],', 'kernel_size: typing.List[int],')
+content = content.replace('is_causal: list[bool],', 'is_causal: typing.List[bool],')
+
+with open(path, 'w') as f:
+    f.write(content)
+"
+    fi
 }
 
 setup_ramdisk() {
