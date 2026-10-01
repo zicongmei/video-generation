@@ -1,10 +1,22 @@
 #!/bin/bash
 set -e
 
-# Fix for Bullseye backports 404 - DO THIS FIRST
-sudo sed -i 's/.*bullseye-backports.*/# &/' /etc/apt/sources.list
+# Fix for Bullseye EOL repositories (archive.debian.org) - DO THIS FIRST
+sudo mkdir -p /etc/apt/apt.conf.d
+echo "Acquire::Check-Valid-Until false;" | sudo tee /etc/apt/apt.conf.d/99no-check-valid-until
+
+if [ -f /etc/apt/sources.list ]; then
+    sudo sed -i -E 's/^(deb|deb-src)(.*bullseye-security)/# \1\2/' /etc/apt/sources.list
+    sudo sed -i -E 's/^(deb|deb-src)(.*bullseye-backports)/# \1\2/' /etc/apt/sources.list
+    sudo sed -i 's|https\?://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list
+    sudo sed -i 's|https\?://security.debian.org/debian-security|http://archive.debian.org/debian|g' /etc/apt/sources.list
+fi
+
 if [ -d /etc/apt/sources.list.d ]; then
-    sudo sed -i 's/.*bullseye-backports.*/# &/' /etc/apt/sources.list.d/*.list 2>/dev/null || true
+    sudo sed -i -E 's/^(deb|deb-src)(.*bullseye-security)/# \1\2/' /etc/apt/sources.list.d/*.list 2>/dev/null || true
+    sudo sed -i -E 's/^(deb|deb-src)(.*bullseye-backports)/# \1\2/' /etc/apt/sources.list.d/*.list 2>/dev/null || true
+    sudo sed -i 's|https\?://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list.d/*.list 2>/dev/null || true
+    sudo sed -i 's|https\?://security.debian.org/debian-security|http://archive.debian.org/debian|g' /etc/apt/sources.list.d/*.list 2>/dev/null || true
 fi
 
 # Combined functions from comfy_common_lib.sh
@@ -21,7 +33,7 @@ setup_serial_logging() {
 install_system_dependencies() {
     echo "Installing system dependencies..."
     sudo apt-get update || true
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx git python3-pip openssl unzip wget aria2 $@
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing nginx git python3-pip openssl unzip wget aria2 "$@"
 }
 
 find_python310() {
