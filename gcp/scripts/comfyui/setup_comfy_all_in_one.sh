@@ -76,23 +76,33 @@ install_comfyui_core() {
     pip install --no-cache-dir "huggingface_hub[cli,hf_transfer]" gguf
 
     # Apply workaround for PyTorch 2.6 list type validation issue in comfy_kitchen custom ops
-    local na_path=$(find venv/lib -name "na.py" | grep "comfy_kitchen/backends/eager/na.py" | head -n 1)
-    if [ -n "$na_path" ] && [ -f "$na_path" ]; then
-        echo "Applying comfy_kitchen PyTorch 2.6 compatibility patch..."
+    local ck_dir=$(find venv/lib -type d -name "comfy_kitchen" | head -n 1)
+    if [ -n "$ck_dir" ] && [ -d "$ck_dir" ]; then
+        echo "Applying comfy_kitchen PyTorch 2.6 compatibility patch across $ck_dir..."
         venv/bin/python -c "
-import typing
-path = '$na_path'
-with open(path, 'r') as f:
-    content = f.read()
+import os
 
-if 'import typing' not in content:
-    content = 'import typing\n' + content
-
-content = content.replace('kernel_size: list[int],', 'kernel_size: typing.List[int],')
-content = content.replace('is_causal: list[bool],', 'is_causal: typing.List[bool],')
-
-with open(path, 'w') as f:
-    f.write(content)
+ck_dir = '$ck_dir'
+for root, dirs, files in os.walk(ck_dir):
+    for f in files:
+        if f.endswith('.py'):
+            p = os.path.join(root, f)
+            with open(p, 'r') as fp:
+                lines = fp.readlines()
+            lines = [l for l in lines if l != 'import typing\n']
+            content = ''.join(lines)
+            if 'typing.List' in content or 'list[' in content:
+                insert_idx = 0
+                for i, l in enumerate(lines):
+                    if l.startswith('from __future__'):
+                        insert_idx = i + 1
+                lines.insert(insert_idx, 'import typing\n')
+                content = ''.join(lines)
+                content = content.replace('list[int]', 'typing.List[int]')
+                content = content.replace('list[bool]', 'typing.List[bool]')
+                content = content.replace('list[str]', 'typing.List[str]')
+                with open(p, 'w') as fp:
+                    fp.write(content)
 "
     fi
 }
